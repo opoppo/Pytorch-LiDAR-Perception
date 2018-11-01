@@ -7,6 +7,9 @@ import torch.utils.data as data
 import sys
 import  time
 from pympler.asizeof import asizeof
+from pympler.tracker import SummaryTracker
+
+tracker = SummaryTracker()
 
 win_res=48
 Xtr = np.load("./Xtr.npy")
@@ -45,49 +48,48 @@ train_loader = data.DataLoader(
 
     # num_workers=12
 )
-bimg,totaltime=[],[]
-num=0
+totaltime=[]
+# num=0
+# bimgflag=0
 for step, (x, yOffs, yConf) in enumerate(train_loader):
     time_start = time.time()
-    batchimg=sp.batchvec2img(x,win_res)
-    if step%5==0:
-        vis.image(batchimg[0])
+    # batchimg=sp.batchvec2img(x,win_res)
+    for vec,yc in zip(x,yConf):
+        sp.vec2img(vec, win_res,yc)
 
-    bimg.append(batchimg)
-    print(".",batchimg.shape,"  ",asizeof(bimg)/(1024*1024),asizeof(batchimg)/(1024*1024),len(bimg))
-    del batchimg
+    # if step%5==0:
+    #     vis.image(z)
 
-    if  (asizeof(bimg)/(1024*1024*1024))>40:#step>=1 and step%100==0:
-        torch.save(bimg, "./img/bimg%.2f"%num)
-        print(len(bimg))
-        num+=1
-        del bimg
-        bimg=[]
-        print("done saving",num)
+    # if bimgflag==0:
+    #     bimg=batchimg
+    #     bimgflag=1
+    # else:
+    #     print(tracker)
+    #     bimg=torch.cat((bimg,batchimg),0)
+    #     bimg.append()
+    #     tracker.print_diff()
+
+    # print(".  ",z.shape,"    ",len(bimg),"    ",asizeof(bimg)/(1024*1024),"    ",asizeof(batchimg)/(1024*1024))
+    # del z
+
+
+
+    # if  (asizeof(bimg)/(1024*1024*1024))>40:#step>=1 and step%100==0:
+    #     torch.save(bimg, "./img/bimg%.2f"%num)
+    #     print(len(bimg))
+    #     num+=1
+    #     del bimg
+    #     bimgflag=0
+
+        # print("done saving",num)
     time_end = time.time()
     totaltime.append(time_end - time_start)
     print("step", step,"  time: %.2f" % (time_end - time_start),
           "s   estimated_time: %.2f" % ((int(lenxtr/len(x)) - step - 1) * sum(totaltime) / ((step + 1) * 60)), "min" ," steps to go: ",int(lenxtr/len(x))-step-1)
     # break
 
-num+=1
-torch.save(bimg, "./img/bimg%.2f"%num)
-print(num,"  ",len(bimg))
-# pp=sp.vec2img(Xtr[1],48)
-# vis.image(pp)
-# Xtr_image1=np.empty((int((len(Xtr))/2),1,48,48),dtype=np.int)
-#
-# for i,cutout in enumerate(Xtr):
-#     if i<=(int(len(Xtr)/2))-1:
-#         Xtr_image1[i]=sp.vec2img(cutout,win_res)
-# torch.save(Xtr_image1,"./Xtr_image1.pt")
-# del  Xtr_image1
-#
-# Xtr_image2=np.empty((int((len(Xtr))/2),1,48,48),dtype=np.int)
-#
-# for i,cutout in enumerate(Xtr):
-#     if i>(int(len(Xtr)/2))-1:
-#         Xtr_image2[i - (int(len(Xtr) / 2))] = sp.vec2img(cutout, win_res)
-# torch.save(Xtr_image2,"./Xtr_image2.pt")
-# del  Xtr_image2
+# num+=1
+# torch.save(bimg, "./img/bimg%.2f"%num)
+# print(num,"  ",len(bimg))
+
 

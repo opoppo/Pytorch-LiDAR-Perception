@@ -34,28 +34,36 @@ def plotprecrec(result):
             #     X.append(torch.Tensor([prec,rec]))
             # vis.scatter(X)
 
+count=[0,0,0]
 
-def vec2img(vec,res):
+def vec2img(vec,res,label):
     img=torch.zeros((1,res,res))
     vec=((vec+1)*res/2-1).type(torch.LongTensor)
     yy=torch.arange(0,len(vec),1).type(torch.LongTensor)
-    # for i,dot in enumerate(vec):
-        # img[0,i,int((dot+1)*res/2)-1]=1
-        # print(i,int((dot+1)*res/2)-1)
-    # img=[dotone(dot,res,img,i) for dot in vec]
+
     img[0, yy, vec] = 1
-    return torchvision.transforms.functional.to_tensor(torchvision.transforms.functional.resize(torchvision.transforms.functional.to_pil_image(img), (224, 224)))
+    z=torchvision.transforms.functional.to_tensor(torchvision.transforms.functional.resize(torchvision.transforms.functional.to_pil_image(img), (224, 224)))
+    # if label==0:
+    #     pass
+        # torchvision.utils.save_image(z,"./img/0/none"+str(count[0])+".png")
+        # count[0]+=1
+    if label==1:
+        torchvision.utils.save_image(z, "./img/1/wcs"+str(count[1])+".png")
+        count[1] += 1
+    elif label==2:
+        torchvision.utils.save_image(z, "./img/2/was"+str(count[2])+".png")
+        count[2] += 1
 
 
-def batchvec2img(batchvec,res):
-    # bimg=torch.zeros((len(batchvec),1,224,224))
-
-    # ii=torch.arange(0,len(batchvec),1).type(torch.LongTensor)
-    # bimg=[vecone(vec,res,bimg,1) for vec in batchvec]
-    # oo=list(vec2img(vec,res) for vec in batchvec]))
-    oo=list(vec2img(vec,res) for vec in batchvec)
-    bimg=torch.stack(oo)
-    return  bimg   # !!!!!!!!!!!!!!!!!!!!!cuda type
+# def batchvec2img(batchvec,res):
+#     # bimg=torch.zeros((len(batchvec),1,224,224))
+#
+#     # ii=torch.arange(0,len(batchvec),1).type(torch.LongTensor)
+#     # bimg=[vecone(vec,res,bimg,1) for vec in batchvec]
+#     # oo=list(vec2img(vec,res) for vec in batchvec]))
+#     oo=list(vec2img(vec,res) for vec in batchvec)
+#
+#     return  torch.stack(oo)   # !!!!!!!!!!!!!!!!!!!!!cuda type
 
 def plotvec2img(Xtr,win_res):
     Xtr=Xtr.reshape((-1, win_res))

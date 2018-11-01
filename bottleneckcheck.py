@@ -201,10 +201,10 @@ class test_data_set(data.Dataset):
         return self.DataTensor.size(0)
 
 #Loading
-Xtr = np.load("./Xtr.npy")
-# Xtr=torch.load('Xtrt.pt')
-ytr_conf = torch.load('ytr_conf.pt')
-ytr_offs = torch.load('ytr_offs.pt')
+# Xtr = np.load("./Xtr.npy")
+Xtr=torch.load('Xtrt.pt')
+ytr_conf = torch.load('ytrt_conf.pt')
+ytr_offs = torch.load('ytrt_offs.pt')
 Xva = torch.load('Xva.pt')
 Xte = torch.load('Xte.pt')
 
@@ -262,7 +262,7 @@ tranning=1 # ????===============================================================
 #Trainning
 if(tranning==1):
     net.train()
-    EPOCH = 100
+    EPOCH = 2
     # p1, p2 = 1, 1
     totaltime,losslist,precslist=[],[],[]
     precs0, recs0,i = 0, 0,0
