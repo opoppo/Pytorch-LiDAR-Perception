@@ -13,13 +13,13 @@ import os
 import math
 import torchvision
 np.set_printoptions(threshold=1000)
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3"
 
 def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
     mylist1 = []
     mylist2 = []
     for Xb in lbu.batched(1, _X, shuf=False, droplast=True):
-        Xbt = torch.Tensor(Xb).cuda()
+        Xbt = torch.Tensor(Xb).cuda(non_blocking=True)
         del Xb
         pred_y_conf0, pred_y_offs0 = net(Xbt)
         del Xbt
@@ -148,17 +148,17 @@ class Mknet(nn.Module):
         self.conv2 = nn.Sequential(
             Reshape(-1, 1, 1, win_res),
             Slot(1, 64, 5),
-            nn.Dropout2d(0.25),
+            # nn.Dropout2d(0.25),
             Slot(64, 64, 5),
             nn.MaxPool2d((1, 2)),
-            nn.Dropout2d(0.25),
+            # nn.Dropout2d(0.25),
             Slot(64, 128, 5),
-            nn.Dropout2d(0.25),
+            # nn.Dropout2d(0.25),
             Slot(128, 128, 3),
             nn.MaxPool2d((1, 2)),
-            nn.Dropout2d(0.25),
+            # nn.Dropout2d(0.25),
             Slot(128, 256, 5),
-            nn.Dropout2d(0.25)
+            # nn.Dropout2d(0.25)
         )
         self.ConfidenceOutput = nn.Sequential(
             nn.Conv2d(256, 3, (1, 3)),
@@ -201,10 +201,10 @@ class test_data_set(data.Dataset):
         return self.DataTensor.size(0)
 
 #Loading
-Xtr = np.load("./Xtr.npy")
-# Xtr=torch.load('Xtrt.pt')
-ytr_conf = torch.load('ytr_conf.pt')
-ytr_offs = torch.load('ytr_offs.pt')
+# Xtr = np.load("./Xtr.npy")
+Xtr=torch.load('Xtrt.pt')
+ytr_conf = torch.load('ytrt_conf.pt')
+ytr_offs = torch.load('ytrt_offs.pt')
 Xva = torch.load('Xva.pt')
 Xte = torch.load('Xte.pt')
 
@@ -221,28 +221,31 @@ te_scans=torch.load('te_scans.pt')
 tr_scans=torch.load('tr_scans.pt')
 
 #Setting up
-DataTensor = torch.Tensor(Xtr).cuda()
-OffsTargetTensor = torch.Tensor(ytr_offs).cuda()
-ConfTargetTensor = torch.Tensor(ytr_conf).cuda()
-del ytr_conf,ytr_offs
+DataTensor = torch.Tensor(Xtr).pin_memory().cuda(non_blocking=True)
+OffsTargetTensor = torch.Tensor(ytr_offs).pin_memory().cuda(non_blocking=True)
+ConfTargetTensor = torch.Tensor(ytr_conf).pin_memory().cuda(non_blocking=True)
+del ytr_conf,ytr_offs,Xtr
 
 trainset = train_data_set(DataTensor, OffsTargetTensor, ConfTargetTensor)
 
 train_loader = data.DataLoader(
     dataset=trainset,
-    batch_size=30000,
+    batch_size=80000, #120000 for 4 GPUs ; 80000 for 3 GPUs
     shuffle=True,
-    drop_last=True
+    drop_last=True,
+    pin_memory=True,
     # num_workers=12
 )
-TestTensor = torch.Tensor(Xte).cuda()
+TestTensor = torch.Tensor(Xte).pin_memory().cuda(non_blocking=True)
+del Xte
 testset = test_data_set(TestTensor)
 
 test_loader=data.DataLoader(
     dataset=testset,
     batch_size=1,
     shuffle=False,
-    drop_last=False
+    drop_last=False,
+    pin_memory=True
 )
 
 net = Mknet(win_res=48)#=====================================
@@ -250,10 +253,10 @@ net = Mknet(win_res=48)#=====================================
 # net=torchvision.models.resnet50(pretrained=True)
 # net.conv1=(3,)
 
-# net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1,2,3])
-net=torch.load('net-all-80-v0.2')
+net=torch.nn.DataParallel(net.cuda(non_blocking=True),device_ids=[0,1,2])
+# net=torch.load('net-all-120-v0.2')
 optimizer = torch.optim.Adam(net.parameters(),lr=0.01)
-loss_class = nn.NLLLoss()
+loss_class = nn.NLLLoss(weight=torch.Tensor((0.5,10,10)).cuda(non_blocking=True))
 loss_offset = nn.MSELoss(reduction='sum')
 
 
@@ -270,21 +273,24 @@ if(tranning==1):
         time_start = time.time()
         for step, (x, yOffs, yConf) in enumerate(train_loader):
             (outConf, outOffs) = net(x)
+            del x
            #torch.Size([15360, 3]) torch.Size([15360, 2])
-            yConfl = yConf.type(torch.LongTensor).cuda()
+            yConfl = yConf.type(torch.LongTensor,non_blocking=True).pin_memory().cuda(non_blocking=True)
+            del yConf
             # if step == 0:
             #     p1 = 1 / loss_softmax(outConf, yConfl)
             #     p2 = 1 / loss_offset(outOffs, yOffs)
-            tgt_noise = torch.from_numpy(np.exp(np.random.randn(*yOffs.shape) / 20)).type(torch.FloatTensor).cuda()
-            mask=(yConfl!=0).view((-1,1)).type(torch.Tensor).cuda()  #  Tensor Type match!!!!
-            n=sum(mask).type(torch.Tensor).cuda()
-            # yOffsb=yOffs.type(torch.ByteTensor).cuda()
-            # outOffs=outOffs.type(torch.ByteTensor).cuda()
+            tgt_noise = torch.exp_(torch.randn(*yOffs.shape) / 20).type(torch.FloatTensor,non_blocking=True).pin_memory().cuda(non_blocking=True)
+            mask=(yConfl!=0).view((-1,1)).type(torch.Tensor,non_blocking=True).pin_memory().cuda(non_blocking=True)  #  Tensor Type match!!!!
+            n=sum(mask).type(torch.Tensor,non_blocking=True).pin_memory().cuda(non_blocking=True)
+            # yOffsb=yOffs.type(torch.ByteTensor).cuda(non_blocking=True)
+            # outOffs=outOffs.type(torch.ByteTensor).cuda(non_blocking=True)
             # print("=====================",n, "  \t  ", yOffs, outOffs,mask)
-            # outOffs=(mask.mul(outOffs)).type(torch.Tensor).cuda()
-            # yOffs = (mask.mul(yOffs)).type(torch.Tensor).cuda()
+            # outOffs=(mask.mul(outOffs)).type(torch.Tensor).cuda(non_blocking=True)
+            # yOffs = (mask.mul(yOffs)).type(torch.Tensor).cuda(non_blocking=True)
 
-            a,b=loss_class(outConf, yConfl),torch.sqrt(loss_offset(outOffs, yOffs*tgt_noise)/n)  #RMSE loss
+            a,b=loss_class(outConf, yConfl),torch.sqrt_(loss_offset(outOffs, yOffs*tgt_noise)/n)  #RMSE loss
+            del tgt_noise,mask,n,yConfl,yOffs
             # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
             loss=a+b
             optimizer.zero_grad()
@@ -298,16 +304,17 @@ if(tranning==1):
             precs,recs=calcPreRec(Xva,va_scans,va_wcs,va_was,_r=0.5,ts=0.9)
             print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set")
             precslist.append((precs,recs))
-            if ( not math.isnan(precs)) and precs>precs0:
+            if ( not math.isnan(precs)) and ( not math.isnan(recs))and precs>precs0 and recs>recs0:
                 torch.save(net, "nettmp")
                 precs0=precs
+                recs0=recs
                 i=0
-            elif not math.isnan(precs):
+            elif not math.isnan(precs) and not math.isnan(recs):
                 i+=1
                 if i>=2:
                     net=torch.load('nettmp')
                     print("done training")
-                    # break===============================
+        break#===============================
 
     torch.save(losslist,"losslist.pt")
     torch.save(precslist,"precslist.pt")
@@ -317,22 +324,22 @@ if(tranning==1):
 #     net=torch.load('net-all-15-v0.1')
 #     print("net loaded")
 
-Pthresh=(1e-3,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9, 0.99,1-1e-3)
-Rthresh=(0.5,0.3)
-
-net.eval()
-for j,rs in enumerate(Rthresh):
-    result = []
-    for i,ts in enumerate(Pthresh):
-        precrec = []
-        precs, recs = calcPreRec(Xte, te_scans, te_wcs, te_was, _r=rs, ts=ts)
-        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with threshhold ",ts,"r=",rs)
-        # precs,recs=torch.Tensor(precs.from_numpy()),torch.Tensor(recs)
-        precrec.append([precs,recs])
-    result.append([precrec, ts,rs])
-torch.save(result,"result.pt")
-torch.save(net,"nettt")
-print("net saved")
+# Pthresh=(1e-3,0.01,0.02,0.04,0.06,0.08,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9, 0.99,1-1e-3)
+# Rthresh=(0.5,0.3)
+#
+# net.eval()
+# for j,rs in enumerate(Rthresh):
+#     result = []
+#     for i,ts in enumerate(Pthresh):
+#         precrec = []
+#         precs, recs = calcPreRec(Xte, te_scans, te_wcs, te_was, _r=rs, ts=ts)
+#         print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with threshhold ",ts,"r=",rs)
+#         # precs,recs=torch.Tensor(precs.from_numpy()),torch.Tensor(recs)
+#         precrec.append([precs,recs])
+#     result.append([precrec, ts,rs])
+# torch.save(result,"result.pt")
+# torch.save(net,"nettt")
+# print("net saved")
 
 # pred_yte_conf,pred_yte_offs=np.zeros((1,Xte.shape[0]*Xte.shape[1],3),dtype=float),np.zeros((1,Xte.shape[0]*Xte.shape[1],2),dtype=float)
 # for step, x in enumerate(test_loader):

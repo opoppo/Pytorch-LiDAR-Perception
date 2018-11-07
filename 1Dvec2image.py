@@ -54,7 +54,7 @@ totaltime=[]
 for step, (x, yOffs, yConf) in enumerate(train_loader):
     time_start = time.time()
     # batchimg=sp.batchvec2img(x,win_res)
-    for vec,yc in zip(x,yConf):
+    for vec,yc,yo in zip(x,yConf,yOffs):
         sp.vec2img(vec, win_res,yc)
 
     # if step%5==0:
