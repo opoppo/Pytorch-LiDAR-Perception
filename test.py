@@ -12,7 +12,9 @@ import  time
 import os
 import math
 import torchvision
-np.set_printoptions(threshold=1000)
+# np.set_printoptions(threshold=1000)
+from tensorboardX import SummaryWriter
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
@@ -61,9 +63,9 @@ def pred2votes(scan, y_conf, y_offs, thresh):
     locs, probs = [], []
     for (pno, pwc, pwa), (dx, dy), r, phi in zip(y_conf, y_offs, scan, u.laser_angles(len(scan))):
         # print(math.exp(pno),"   ",math.exp(pwc),"   ",math.exp(pwa))
-        if thresh < pwc+pwa:
+        if thresh < np.exp(pwc)+np.exp(pwa):
             locs.append(u.rphi_to_xy(*win2global(r, phi, dx, dy)))
-            probs.append((pwc,pwa))
+            probs.append((np.exp(pwc),np.exp(pwa)))
     return locs, probs
 
 
@@ -95,23 +97,6 @@ def compute_precrecs(
             precs_wa[i,j], recs_wa[i,j] = u.precrec(wadets, gt_was, r, pred_rphi=False, gt_rphi=True)
         lbu.printnow(".")
     return (precs, recs), (precs_wc, recs_wc), (precs_wa, recs_wa)
-
-# def plot_pr_curve(det, wcs, was, radii=(0.1,0.3,0.5,0.7,0.9), figsize=(15,10)):
-#     R = len(radii)
-#     assert R == det[0].shape[1], "You forgot to update the radii."
-#
-#     fig, ax = plt.subplots(figsize=figsize)
-#
-#     for i, r in enumerate(radii):
-#         ls = {-1: '--', 0: '-', 1:'-.'}[np.sign(i-R//2)]
-#         ax.plot(det[1][:,i], det[0][:,i], label='r={}, all'.format(r), c='#E24A33', ls=ls)
-#         ax.plot(wcs[1][:,i], wcs[0][:,i], label='r={}, wcs'.format(r), c='#348ABD', ls=ls)
-#         ax.plot(was[1][:,i], was[0][:,i], label='r={}, was'.format(r), c='#988ED5', ls=ls)
-#
-#     u.prettify_pr_curve(ax)
-#     lbplt.fatlegend(ax)
-#     return fig, ax
-
 
 class Reshape(nn.Module):
     def __init__(self, *args):
@@ -163,7 +148,7 @@ class Mknet(nn.Module):
         self.ConfidenceOutput = nn.Sequential(
             nn.Conv2d(256, 3, (1, 3)),
             Reshape(-1, 3),
-            nn.Softmax()
+            nn.LogSoftmax(dim=-1)
         )
 
         self.OffsetVoteOutput = nn.Sequential(
@@ -176,29 +161,6 @@ class Mknet(nn.Module):
         confi = self.ConfidenceOutput(y)
         offset = self.OffsetVoteOutput(y)
         return (confi, offset)
-
-
-# class train_data_set(data.Dataset):
-#     def __init__(self, DataTensor, TargetTensor1, TargetTensor2):
-#         self.DataTensor = DataTensor
-#         self.TargetTensor1 = TargetTensor1
-#         self.TargetTensor2 = TargetTensor2
-#
-#     def __getitem__(self, index):
-#         return self.DataTensor[index], self.TargetTensor1[index], self.TargetTensor2[index]
-#
-#     def __len__(self):
-#         return self.DataTensor.size(0)
-#
-# class test_data_set(data.Dataset):
-#     def __init__(self, DataTensor):
-#         self.DataTensor = DataTensor
-#
-#     def __getitem__(self, index):
-#         return self.DataTensor[index]
-#
-#     def __len__(self):
-#         return self.DataTensor.size(0)
 
 #Loading
 # Xtr = np.load("./Xtr.npy")
@@ -232,7 +194,7 @@ train_loader = data.DataLoader(
     dataset=trainset,
     batch_size=60000, #120000 for 4 GPUs ; 80000 for 3 GPUs
     shuffle=True,
-    drop_last=True,
+    drop_last=False,
     # pin_memory=True,
     # num_workers=12
 )
@@ -259,6 +221,9 @@ optimizer = torch.optim.Adam(net.parameters(),lr=0.01)
 loss_class = nn.NLLLoss(torch.Tensor((0.5,10,10)).cuda(non_blocking=True))
 loss_offset = nn.MSELoss(reduction='sum')
 
+writer = SummaryWriter()
+x = torch.FloatTensor([100])
+y = torch.FloatTensor([500])
 
 
 tranning=1 # ????========================================================================================
@@ -277,20 +242,12 @@ if(tranning==1):
            #torch.Size([15360, 3]) torch.Size([15360, 2])
             yConfl = yConf.type(torch.cuda.LongTensor)
 
-            # if step == 0:
-            #     p1 = 1 / loss_softmax(outConf, yConfl)
-            #     p2 = 1 / loss_offset(outOffs, yOffs)
             tgt_noise = ((torch.randn(*yOffs.shape)).div_(20)).exp_().type(torch.cuda.FloatTensor)
             mask = ((yConf != 0).view((-1, 1))).type(torch.cuda.FloatTensor)  # Tensor Type match!!!!
             del yConf
             n = mask.sum()
-            # yOffsb=yOffs.type(torch.ByteTensor).cuda(non_blocking=True)
-            # outOffs=outOffs.type(torch.ByteTensor).cuda(non_blocking=True)
-            # print("=====================",n, "  \t  ", yOffs, outOffs,mask)
-            # outOffs=(mask.mul(outOffs)).type(torch.Tensor).cuda(non_blocking=True)
-            # yOffs = (mask.mul(yOffs)).type(torch.Tensor).cuda(non_blocking=True)
 
-            a=loss_class(outConf.log_().mul_((1-outConf).pow_(2)), yConfl)  #Focal loss
+            a=loss_class(outConf.mul_((1-outConf.exp()).pow_(2)), yConfl)  #Focal loss
             if n > 0:
                 b=((loss_offset(outOffs, yOffs.mul_(tgt_noise))).div_(n)).sqrt_()  #RMSE loss
             else:
@@ -305,6 +262,15 @@ if(tranning==1):
         totaltime.append(time_end-time_start)
         losslist.append((epoch,a.item(),b.item(),loss.item()))
         print("EPOCH",epoch,"  loss_softmax: %.4f"%a.item(),"  loss_offset: %.4f"%b.item(),"  loss_total: %.4f"%loss.item(),"  epoch_time: %.2f"%(time_end-time_start),"s   estimated_time: %.2f"%((EPOCH-epoch-1)*sum(totaltime)/((epoch+1)*60)),"min")
+
+        # writer.add_histogram('zz/x', x, epoch)
+        # writer.add_histogram('zz/y', y, epoch)
+        # writer.add_scalar('data/x', x, epoch)
+        # writer.add_scalar('data/y', y, epoch)
+        # writer.add_scalar('data/loss', loss, epoch)
+        # writer.add_scalars('data/scalar_group', {'x': x , 'y': y , 'loss': loss}, epoch)
+        # writer.add_text('zz/text', 'zz: this is epoch ' + str(epoch), epoch)
+
         if epoch%5==0:
             precs,recs=calcPreRec(Xva,va_scans,va_wcs,va_was,_r=0.5,ts=0.9)
             print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set")
@@ -323,6 +289,9 @@ if(tranning==1):
 
     torch.save(losslist,"losslist.pt")
     torch.save(precslist,"precslist.pt")
+
+    writer.export_scalars_to_json("./test.json")
+    writer.close()
 
    # Predicting
 # if (tranning != 1):
@@ -345,23 +314,5 @@ for j,rs in enumerate(Rthresh):
 torch.save(result,"result.pt")
 torch.save(net,"nettt")
 print("net saved")
-
-# pred_yte_conf,pred_yte_offs=np.zeros((1,Xte.shape[0]*Xte.shape[1],3),dtype=float),np.zeros((1,Xte.shape[0]*Xte.shape[1],2),dtype=float)
-# for step, x in enumerate(test_loader):
-#     (outConf, outOffs) = net(x)
-#     # print(step)
-#     p=outOffs.shape[0]
-#     pred_yte_conf[0,step*p:((step+1)*p),:]=outConf.cpu().detach().numpy()
-#     pred_yte_offs[0,step*p:((step+1)*p),:]=outOffs.cpu().detach().numpy()
-#
-#
-# # pred_yte_conf, pred_yte_offs = map(np.array, zip(*(([net(torch.Tensor(Xb)) for Xb in Xte]).numpy())))
-# # torch.save(pred_yte_offs,"./pred_yte_offs.pt")
-# # torch.save(pred_yte_conf,"./pred_yte_conf.pt")
-#
-# precrecs_te = compute_precrecs(te_scans, pred_yte_conf, pred_yte_offs, te_wcs, te_was)
-# torch.save(precrecs_te,"./precrecs_te.pt")
-#
-# plot_pr_curve(*precrecs_te);
 
 
