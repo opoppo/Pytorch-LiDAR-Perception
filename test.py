@@ -1,21 +1,20 @@
 import torch
 import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 import lbtoolbox.util as lbu
 import torch.utils.data as data
 import utils as u
-import lbtoolbox.plotting as lbplt
-import matplotlib.pyplot as plt
-from visualize import  make_dot
 import  time
 import os
 import math
 import torchvision
-# np.set_printoptions(threshold=1000)
+import visdom
 from tensorboardX import SummaryWriter
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+
+writer = SummaryWriter()
+vis = visdom.Visdom()
 
 def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
     mylist1 = []
@@ -58,7 +57,6 @@ def pred2det_comb(scans, confs, offss, thresh, out_rphi=True):
 
     return dets_all, dets
 
-
 def pred2votes(scan, y_conf, y_offs, thresh):
     locs, probs = [], []
     for (pno, pwc, pwa), (dx, dy), r, phi in zip(y_conf, y_offs, scan, u.laser_angles(len(scan))):
@@ -68,11 +66,22 @@ def pred2votes(scan, y_conf, y_offs, thresh):
             probs.append((np.exp(pwc),np.exp(pwa)))
     return locs, probs
 
-
 def win2global(r, phi, dx, dy):
     y = r + dy
     dphi = np.arctan2(dx, y)  # dx first is correct due to problem geometry dx -> y axis and vice versa.
     return y / np.cos(dphi), phi + dphi
+
+def CalcAP(precslist,recslist):
+    list.sort(precslist,reverse=True)
+    list.sort(recslist, reverse=False)
+    acumArea=0
+    prevpr,prevre=1,0
+    for pr,re in zip(precslist,recslist):
+        if re[0]>prevre:
+            acumArea+=0.5*(pr[0]+prevpr)*(re[0]-prevre)
+            prevpr=pr[0]
+            prevre=re[0]
+    return  acumArea if acumArea<=1 else 1
 
 def compute_precrecs(
     scans, pred_conf, pred_offs, gt_wcs, gt_was,
@@ -106,7 +115,6 @@ class Reshape(nn.Module):
     def forward(self, _x):
         return _x.view(self.shape)
 
-
 class Slot(nn.Module):
     def __init__(self, nin, nout, fs):
         super(Slot, self).__init__()
@@ -125,7 +133,6 @@ class Slot(nn.Module):
     def forward(self, _x):
         y = self.conv1(_x)
         return y
-
 
 class Mknet(nn.Module):
     def __init__(self, win_res):
@@ -162,11 +169,11 @@ class Mknet(nn.Module):
         offset = self.OffsetVoteOutput(y)
         return (confi, offset)
 
-#Loading
-# Xtr = np.load("./Xtr.npy")
-Xtr=torch.load('Xtrt.pt')
-ytr_conf = torch.load('ytrt_conf.pt')
-ytr_offs = torch.load('ytrt_offs.pt')
+
+Xtr = np.load("./Xtr.npy")
+# Xtr=torch.load('Xtrt.pt')
+ytr_conf = torch.load('ytr_conf.pt')
+ytr_offs = torch.load('ytr_offs.pt')
 Xva = torch.load('Xva.pt')
 Xte = torch.load('Xte.pt')
 
@@ -199,7 +206,7 @@ train_loader = data.DataLoader(
     # num_workers=12
 )
 TestTensor = torch.cuda.FloatTensor(Xte)
-del Xte
+
 testset = data.TensorDataset(TestTensor)
 
 test_loader=data.DataLoader(
@@ -210,33 +217,44 @@ test_loader=data.DataLoader(
     # pin_memory=True
 )
 
-net = Mknet(win_res=48)#=====================================
+# net = Mknet(win_res=48)#=====================================
 
 # net=torchvision.models.resnet50(pretrained=True)
 # net.conv1=(3,)
 
-net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
-# net=torch.load('net-all-120-v0.2')
-optimizer = torch.optim.Adam(net.parameters(),lr=0.01)
+# net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
+net=torch.load('net-20-0.01-30-0.001')
+optimizer = torch.optim.Adam(net.parameters(),lr=0.001)
 loss_class = nn.NLLLoss(torch.Tensor((0.5,10,10)).cuda(non_blocking=True))
 loss_offset = nn.MSELoss(reduction='sum')
 
-writer = SummaryWriter()
-x = torch.FloatTensor([100])
-y = torch.FloatTensor([500])
+Pthresh = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,0.95, 0.975,0.99,0.999)
+Rthresh = (0.5, 0.3)
 
+#====================================================================================================
+training=0 # ????========================================================================================
+#====================================================================================================
 
-tranning=1 # ????========================================================================================
-#Trainning
-if(tranning==1):
-    net.train()
+#training
+if(training==1):
+
     EPOCH = 100
-    # p1, p2 = 1, 1
+    break_flag=False
+
     totaltime,losslist,precslist=[],[],[]
     precs0, recs0,i = 0, 0,0
+
     for epoch in range(EPOCH):
+        if break_flag == True:
+            break
+
+        net.train()
         time_start = time.time()
+
         for step, (x, yOffs, yConf) in enumerate(train_loader):
+            if break_flag==True:
+                break
+
             (outConf, outOffs) = net(x)
             del x
            #torch.Size([15360, 3]) torch.Size([15360, 2])
@@ -263,56 +281,82 @@ if(tranning==1):
         losslist.append((epoch,a.item(),b.item(),loss.item()))
         print("EPOCH",epoch,"  loss_softmax: %.4f"%a.item(),"  loss_offset: %.4f"%b.item(),"  loss_total: %.4f"%loss.item(),"  epoch_time: %.2f"%(time_end-time_start),"s   estimated_time: %.2f"%((EPOCH-epoch-1)*sum(totaltime)/((epoch+1)*60)),"min")
 
-        # writer.add_histogram('zz/x', x, epoch)
-        # writer.add_histogram('zz/y', y, epoch)
-        # writer.add_scalar('data/x', x, epoch)
-        # writer.add_scalar('data/y', y, epoch)
-        # writer.add_scalar('data/loss', loss, epoch)
-        # writer.add_scalars('data/scalar_group', {'x': x , 'y': y , 'loss': loss}, epoch)
+
+        # writer.add_histogram('zz/x', , epoch)
+        writer.add_scalar('data/loss', loss.item(), epoch)
+        # writer.add_scalars('data/scalar_group', {'x': x , 'y': y , 'loss': loss.item()}, epoch)
         # writer.add_text('zz/text', 'zz: this is epoch ' + str(epoch), epoch)
 
         if epoch%5==0:
-            precs,recs=calcPreRec(Xva,va_scans,va_wcs,va_was,_r=0.5,ts=0.9)
-            print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set")
-            precslist.append((precs,recs))
-            if ( not math.isnan(precs)) and ( not math.isnan(recs))and precs>precs0 and recs>recs0:
+
+            waitfor=5   # rounds to wait for further improvement before quit training=================================
+            net.eval()
+            precslist, recslist = [], []
+            rs=0.5
+            prevap=0
+            ppp=0
+
+            for i, ts in enumerate(Pthresh):
+                precs, recs = calcPreRec(Xva, va_scans, va_wcs, va_was, _r=rs, ts=ts)
+                print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set with non-empty prob-thresh ",
+                      ts, "  r=", rs)
+                precslist.append([precs])
+                recslist.append([recs])
+
+            x, y = torch.Tensor(recslist), torch.Tensor(precslist)
+            vis.line(Y=y, X=x)
+
+            ap = CalcAP(precslist, recslist)
+            print("Average Precision : %.6f" % ap, " on validation set with r=", rs)
+
+            if ( not math.isnan(ap)) and ap>=prevap:
                 torch.save(net, "nettmp")
-                precs0=precs
-                recs0=recs
-                i=0
-            elif not math.isnan(precs) and not math.isnan(recs):
-                i+=1
-                if i>=2:
-                    with torch.load('nettmp') as net :
-                        print("done training")
-        # break#===============================
+                print("===improved model saved===")
+                prevap=ap
+                ppp=0
+            elif not math.isnan(ap):
+                ppp+=1
+                if ppp>=waitfor:
+                    net=torch.load('nettmp')
+                    print("===done training, rolling back to previous model===")
+                    break_flag=True
 
     torch.save(losslist,"losslist.pt")
     torch.save(precslist,"precslist.pt")
 
-    writer.export_scalars_to_json("./test.json")
-    writer.close()
-
-   # Predicting
-# if (tranning != 1):
+# Predicting
+# if (training != 1):
 #     net=torch.load('net-all-15-v0.1')
 #     print("net loaded")
 
-Pthresh=(1e-3,0.01,0.02,0.04,0.06,0.08,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9, 0.99,1-1e-3)
-Rthresh=(0.5,0.3)
 
 net.eval()
-for j,rs in enumerate(Rthresh):
-    result = []
-    for i,ts in enumerate(Pthresh):
-        precrec = []
+result = []
+for j, rs in enumerate(Rthresh):
+    precslist, recslist = [], []
+    for i, ts in enumerate(Pthresh):
         precs, recs = calcPreRec(Xte, te_scans, te_wcs, te_was, _r=rs, ts=ts)
-        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with threshhold ",ts,"r=",rs)
-        # precs,recs=torch.Tensor(precs.from_numpy()),torch.Tensor(recs)
-        precrec.append([precs,recs])
-    result.append([precrec, ts,rs])
-torch.save(result,"result.pt")
-torch.save(net,"nettt")
-print("net saved")
+        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with non-empty prob-thresh ", ts, "  r=", rs)
+
+        precslist.append([precs])
+        recslist.append([recs])
+
+    x, y = torch.Tensor(recslist), torch.Tensor(precslist)
+    vis.line(Y=y, X=x)
+
+    ap=CalcAP(precslist,recslist)
+    print("Average Precision : %.6f" % ap, " on test set with r=",rs)
+    result.append([precslist, recslist, rs,ap])
+    break
+
+torch.save(result, "result.pt")
+torch.save(net, "nettt")
+print("====finally net saved====")
+
+writer.export_scalars_to_json("./test.json")
+writer.close()
+
+
+
 
 
