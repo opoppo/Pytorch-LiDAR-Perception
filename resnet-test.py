@@ -7,8 +7,8 @@ import torch.utils.data as data
 import utils as u
 import lbtoolbox.plotting as lbplt
 import matplotlib.pyplot as plt
-from visualize import  make_dot
-import  time
+from visualize import make_dot
+import time
 import os
 import math
 import torchvision
@@ -17,7 +17,8 @@ import showplot as sp
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
-def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
+
+def calcPreRec(_X, _scans, _wcs, _was, _r, ts):
     mylist1 = []
     mylist2 = []
     for Xb in lbu.batched(1, _X, shuf=False, droplast=True):
@@ -28,7 +29,7 @@ def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
         pred_y_conf, pred_y_offs = pred_y_conf0.detach().cpu().numpy(), pred_y_offs0.detach().cpu().numpy()
         del pred_y_offs0, pred_y_conf0
         print(pred_y_conf.shape)
-        m=input()
+        m = input()
         mylist1.append(pred_y_offs)
         mylist2.append(pred_y_conf)
         del pred_y_conf, pred_y_offs
@@ -36,10 +37,12 @@ def calcPreRec(_X,_scans,_wcs,_was,_r,ts):
     pred_y_conf_batches = np.array(mylist2)
     pred_y_offs_batches = np.array(mylist1)
     del mylist1, mylist2
-    alldets, (wcdets, wadets) = pred2det_comb(_scans, pred_y_conf_batches, pred_y_offs_batches, thresh=ts,out_rphi=False)
+    alldets, (wcdets, wadets) = pred2det_comb(_scans, pred_y_conf_batches, pred_y_offs_batches, thresh=ts,
+                                              out_rphi=False)
     gt_all = [wcs + was for wcs, was in zip(_wcs, _was)]
     precs, recs = u.precrec(alldets, gt_all, _r, pred_rphi=False, gt_rphi=True)
-    return precs,recs
+    return precs, recs
+
 
 def pred2det_comb(scans, confs, offss, thresh, out_rphi=True):
     K = confs.shape[2] - 1  # .shape[2] - 1  # Minus the "nothing" type.
@@ -63,7 +66,7 @@ def pred2det_comb(scans, confs, offss, thresh, out_rphi=True):
 def pred2votes(scan, y_conf, y_offs, thresh):
     locs, probs = [], []
     for (pno, pwc, pwa), (dx, dy), r, phi in zip(y_conf, y_offs, scan, u.laser_angles(len(scan))):
-        if thresh < math.exp(pwc)+math.exp(pwa):
+        if thresh < math.exp(pwc) + math.exp(pwa):
             # print(thresh,"\t",pwc,"\t",pwa)
             locs.append(u.rphi_to_xy(*win2global(r, phi, dx, dy)))
             probs.append((math.exp(pwc), math.exp(pwa)))
@@ -75,45 +78,48 @@ def win2global(r, phi, dx, dy):
     dphi = np.arctan2(dx, y)  # dx first is correct due to problem geometry dx -> y axis and vice versa.
     return y / np.cos(dphi), phi + dphi
 
+
 def compute_precrecs(
-    scans, pred_conf, pred_offs, gt_wcs, gt_was,
-    ts=(1e-5, 1e-3, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1-1e-3, 1-1e-5),
-    rs=(0.1, 0.3, 0.5, 0.7, 0.9)
+        scans, pred_conf, pred_offs, gt_wcs, gt_was,
+        ts=(1e-5, 1e-3, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1 - 1e-3, 1 - 1e-5),
+        rs=(0.1, 0.3, 0.5, 0.7, 0.9)
 ):
-    gt_all = [wcs+was for wcs, was in zip(gt_wcs, gt_was)]
+    gt_all = [wcs + was for wcs, was in zip(gt_wcs, gt_was)]
 
     if isinstance(rs, (float, int)):
         rs = (rs,)
 
     mkgt = lambda: np.full((len(ts), len(rs)), np.nan)
-    precs   , recs    = mkgt(), mkgt()
+    precs, recs = mkgt(), mkgt()
     precs_wc, recs_wc = mkgt(), mkgt()
     precs_wa, recs_wa = mkgt(), mkgt()
 
     for i, t in enumerate(ts):
         alldets, (wcdets, wadets) = pred2det_comb(scans, pred_conf, pred_offs, thresh=t, out_rphi=False)
         for j, r in enumerate(rs):
-            precs[i,j], recs[i,j] = u.precrec(alldets, gt_all, r, pred_rphi=False, gt_rphi=True)
-            precs_wc[i,j], recs_wc[i,j] = u.precrec(wcdets, gt_wcs, r, pred_rphi=False, gt_rphi=True)
-            precs_wa[i,j], recs_wa[i,j] = u.precrec(wadets, gt_was, r, pred_rphi=False, gt_rphi=True)
+            precs[i, j], recs[i, j] = u.precrec(alldets, gt_all, r, pred_rphi=False, gt_rphi=True)
+            precs_wc[i, j], recs_wc[i, j] = u.precrec(wcdets, gt_wcs, r, pred_rphi=False, gt_rphi=True)
+            precs_wa[i, j], recs_wa[i, j] = u.precrec(wadets, gt_was, r, pred_rphi=False, gt_rphi=True)
         lbu.printnow(".")
     return (precs, recs), (precs_wc, recs_wc), (precs_wa, recs_wa)
 
-def plot_pr_curve(det, wcs, was, radii=(0.1,0.3,0.5,0.7,0.9), figsize=(15,10)):
+
+def plot_pr_curve(det, wcs, was, radii=(0.1, 0.3, 0.5, 0.7, 0.9), figsize=(15, 10)):
     R = len(radii)
     assert R == det[0].shape[1], "You forgot to update the radii."
 
     fig, ax = plt.subplots(figsize=figsize)
 
     for i, r in enumerate(radii):
-        ls = {-1: '--', 0: '-', 1:'-.'}[np.sign(i-R//2)]
-        ax.plot(det[1][:,i], det[0][:,i], label='r={}, all'.format(r), c='#E24A33', ls=ls)
-        ax.plot(wcs[1][:,i], wcs[0][:,i], label='r={}, wcs'.format(r), c='#348ABD', ls=ls)
-        ax.plot(was[1][:,i], was[0][:,i], label='r={}, was'.format(r), c='#988ED5', ls=ls)
+        ls = {-1: '--', 0: '-', 1: '-.'}[np.sign(i - R // 2)]
+        ax.plot(det[1][:, i], det[0][:, i], label='r={}, all'.format(r), c='#E24A33', ls=ls)
+        ax.plot(wcs[1][:, i], wcs[0][:, i], label='r={}, wcs'.format(r), c='#348ABD', ls=ls)
+        ax.plot(was[1][:, i], was[0][:, i], label='r={}, was'.format(r), c='#988ED5', ls=ls)
 
     u.prettify_pr_curve(ax)
     lbplt.fatlegend(ax)
     return fig, ax
+
 
 class Reshape(nn.Module):
     def __init__(self, *args):
@@ -123,13 +129,14 @@ class Reshape(nn.Module):
     def forward(self, _x):
         return _x.view(self.shape)
 
-class BatchVec2img(nn.Module):
-    def __init__(self,res):
-        super(BatchVec2img,self).__init__()
-        self.res=res
 
-    def forward(self,x):
-        return sp.batchvec2img(x,self.res)
+class BatchVec2img(nn.Module):
+    def __init__(self, res):
+        super(BatchVec2img, self).__init__()
+        self.res = res
+
+    def forward(self, x):
+        return sp.batchvec2img(x, self.res)
 
 
 class Slot(nn.Module):
@@ -184,14 +191,15 @@ class Mknet(nn.Module):
         y = self.conv2(X)
         confi = self.ConfidenceOutput(y)
         print(y.shape)
-        m=input()
+        m = input()
         offset = self.OffsetVoteOutput(y)
         return (confi, offset)
+
 
 class OutputLayer(nn.Module):
     def __init__(self):
         super(OutputLayer, self).__init__()
-        self.fc=nn.Linear(2048,5,bias=True)
+        self.fc = nn.Linear(2048, 5, bias=True)
 
         def forward(self, X):
             y = self.fc(X)
@@ -199,19 +207,20 @@ class OutputLayer(nn.Module):
             offset = y[3:5]
             return (confi, offset)
 
+
 class InputLayer(nn.Module):
-    def __init__(self,win_res):
+    def __init__(self, win_res):
         super(InputLayer, self).__init__()
         self.preprc = nn.Sequential(
             # Reshape(-1, win_res),
             # BatchVec2img(win_res),
-            nn.Conv2d(1,64,kernel_size=(7,7),stride=(2,2),padding=(3,3),bias=False)
+            nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
         )
 
     def forward(self, X):
         y = self.preprc(X)
         print(y.shape)
-        y=y.type(torch.FloatTensor).cuda()
+        y = y.type(torch.FloatTensor).cuda()
         return y
 
 
@@ -227,6 +236,7 @@ class train_data_set(data.Dataset):
     def __len__(self):
         return self.DataTensor.size(0)
 
+
 class test_data_set(data.Dataset):
     def __init__(self, DataTensor):
         self.DataTensor = DataTensor
@@ -237,31 +247,32 @@ class test_data_set(data.Dataset):
     def __len__(self):
         return self.DataTensor.size(0)
 
-#Loading
+
+# Loading
 # Xtr = np.load("./Xtr.npy")
-Xtr=torch.load('Xtrt.pt')
+Xtr = torch.load('Xtrt.pt')
 ytr_conf = torch.load('ytrt_conf.pt')
 ytr_offs = torch.load('ytrt_offs.pt')
 Xva = torch.load('Xva.pt')
 Xte = torch.load('Xte.pt')
 
 va_wcs = torch.load('va_wcs.pt')
-te_wcs=torch.load('te_wcs.pt')
-tr_wcs=torch.load('tr_wcs.pt')
+te_wcs = torch.load('te_wcs.pt')
+tr_wcs = torch.load('tr_wcs.pt')
 
 va_was = torch.load('va_was.pt')
-te_was=torch.load('te_was.pt')
-tr_was=torch.load('tr_was.pt')
+te_was = torch.load('te_was.pt')
+tr_was = torch.load('tr_was.pt')
 
 va_scans = torch.load('va_scans.pt')
-te_scans=torch.load('te_scans.pt')
-tr_scans=torch.load('tr_scans.pt')
+te_scans = torch.load('te_scans.pt')
+tr_scans = torch.load('tr_scans.pt')
 
-#Setting up
+# Setting up
 DataTensor = torch.Tensor(Xtr).cuda()
 OffsTargetTensor = torch.Tensor(ytr_offs).cuda()
 ConfTargetTensor = torch.Tensor(ytr_conf).cuda()
-del ytr_conf,ytr_offs
+del ytr_conf, ytr_offs
 
 trainset = train_data_set(DataTensor, OffsTargetTensor, ConfTargetTensor)
 
@@ -275,7 +286,7 @@ train_loader = data.DataLoader(
 TestTensor = torch.Tensor(Xte).cuda()
 testset = test_data_set(TestTensor)
 
-test_loader=data.DataLoader(
+test_loader = data.DataLoader(
     dataset=testset,
     batch_size=1,
     shuffle=False,
@@ -283,90 +294,92 @@ test_loader=data.DataLoader(
 )
 
 # net = Mknet(win_res=48)
-net=torchvision.models.resnet50(pretrained=True) #======================
-net.conv1=InputLayer(win_res=48)
-net.fc=OutputLayer()
+net = torchvision.models.resnet50(pretrained=True)  # ======================
+net.conv1 = InputLayer(win_res=48)
+net.fc = OutputLayer()
 net.cuda()
 # net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
-net=torch.load('net-all-80-v0.2')
-optimizer = torch.optim.Adadelta(net.parameters(),lr=0.6,weight_decay=1e-3)
+net = torch.load('net-all-80-v0.2')
+optimizer = torch.optim.Adadelta(net.parameters(), lr=0.6, weight_decay=1e-3)
 loss_class = nn.NLLLoss()
-loss_offset = nn.MSELoss(reduction='sum')   #RMSE
+loss_offset = nn.MSELoss(reduction='sum')  # RMSE
 
-#Trainning
-tranning=0 # ????========================================================================================
-#Trainning
-if(tranning==1):
+# Trainning
+tranning = 0  # ????========================================================================================
+# Trainning
+if (tranning == 1):
     net.train()
     EPOCH = 100
     # p1, p2 = 1, 1
-    totaltime,losslist,precslist=[],[],[]
-    precs0, recs0,i = 0, 0,0
+    totaltime, losslist, precslist = [], [], []
+    precs0, recs0, i = 0, 0, 0
     for epoch in range(EPOCH):
         time_start = time.time()
         for step, (x, yOffs, yConf) in enumerate(train_loader):
             (outConf, outOffs) = net(x)
-           #torch.Size([15360, 3]) torch.Size([15360, 2])
+            # torch.Size([15360, 3]) torch.Size([15360, 2])
             yConfl = yConf.type(torch.LongTensor).cuda()
             # if step == 0:
             #     p1 = 1 / loss_softmax(outConf, yConfl)
             #     p2 = 1 / loss_offset(outOffs, yOffs)
             tgt_noise = torch.from_numpy(np.exp(np.random.randn(*yOffs.shape) / 20)).cuda()
-            mask=(yConfl!=0).view((-1,1)).type(torch.Tensor).cuda()  #  Tensor Type match!!!!
-            n=sum(mask).type(torch.Tensor).cuda()
+            mask = (yConfl != 0).view((-1, 1)).type(torch.Tensor).cuda()  # Tensor Type match!!!!
+            n = sum(mask).type(torch.Tensor).cuda()
             # yOffsb=yOffs.type(torch.ByteTensor).cuda()
             # outOffs=outOffs.type(torch.ByteTensor).cuda()
             # print("=====================",n, "  \t  ", yOffs, outOffs,mask)
             # outOffs=(mask.mul(outOffs)).type(torch.Tensor).cuda()
             # yOffs = (mask.mul(yOffs)).type(torch.Tensor).cuda()
 
-            a,b=loss_class(outConf, yConfl),torch.sqrt(loss_offset(outOffs, yOffs*tgt_noise)/n)  #RMSE loss
+            a, b = loss_class(outConf, yConfl), torch.sqrt(loss_offset(outOffs, yOffs * tgt_noise) / n)  # RMSE loss
             # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
-            loss=a+b
+            loss = a + b
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         time_end = time.time()
-        totaltime.append(time_end-time_start)
-        losslist.append((epoch,a.item(),b.item(),loss.item()))
-        print("EPOCH",epoch,"  loss_softmax: %.4f"%a.item(),"  loss_offset: %.4f"%b.item(),"  loss_total: %.4f"%loss.item(),"  epoch_time: %.2f"%(time_end-time_start),"s   estimated_time: %.2f"%((EPOCH-epoch-1)*sum(totaltime)/((epoch+1)*60)),"min")
-        if epoch%5==0:
-            precs,recs=calcPreRec(Xva,va_scans,va_wcs,va_was,_r=0.5,ts=0.9)
+        totaltime.append(time_end - time_start)
+        losslist.append((epoch, a.item(), b.item(), loss.item()))
+        print("EPOCH", epoch, "  loss_softmax: %.4f" % a.item(), "  loss_offset: %.4f" % b.item(),
+              "  loss_total: %.4f" % loss.item(), "  epoch_time: %.2f" % (time_end - time_start),
+              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min")
+        if epoch % 5 == 0:
+            precs, recs = calcPreRec(Xva, va_scans, va_wcs, va_was, _r=0.5, ts=0.9)
             print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set")
-            precslist.append((precs,recs))
-            if ( not math.isnan(precs)) and precs>precs0:
+            precslist.append((precs, recs))
+            if (not math.isnan(precs)) and precs > precs0:
                 torch.save(net, "nettmp")
-                precs0=precs
-                i=0
+                precs0 = precs
+                i = 0
             elif not math.isnan(precs):
-                i+=1
-                if i>=2:
-                    net=torch.load('nettmp')
+                i += 1
+                if i >= 2:
+                    net = torch.load('nettmp')
                     print("done training")
                     # break===============================
 
-    torch.save(losslist,"losslist.pt")
-    torch.save(precslist,"precslist.pt")
+    torch.save(losslist, "losslist.pt")
+    torch.save(precslist, "precslist.pt")
 
-   # Predicting
+# Predicting
 # if (tranning != 1):
 #     net=torch.load('net-all-15-v0.1')
 #     print("net loaded")
 
-Pthresh=(1e-3,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9, 0.99,1-1e-3)
-Rthresh=(0.5,0.3)
+Pthresh = (1e-3, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 1 - 1e-3)
+Rthresh = (0.5, 0.3)
 net.eval()
-for j,rs in enumerate(Rthresh):
+for j, rs in enumerate(Rthresh):
     result = []
-    for i,ts in enumerate(Pthresh):
+    for i, ts in enumerate(Pthresh):
         precrec = []
         precs, recs = calcPreRec(Xte, te_scans, te_wcs, te_was, _r=rs, ts=ts)
-        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with threshhold ",ts,"r=",rs)
+        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with threshhold ", ts, "r=", rs)
         # precs,recs=torch.Tensor(precs.from_numpy()),torch.Tensor(recs)
-        precrec.append([precs,recs])
-    result.append([precrec, ts,rs])
-torch.save(result,"result.pt")
-torch.save(net,"nettt")
+        precrec.append([precs, recs])
+    result.append([precrec, ts, rs])
+torch.save(result, "result.pt")
+torch.save(net, "nettt")
 print("net saved")
 
 # pred_yte_conf,pred_yte_offs=np.zeros((1,Xte.shape[0]*Xte.shape[1],3),dtype=float),np.zeros((1,Xte.shape[0]*Xte.shape[1],2),dtype=float)
@@ -386,5 +399,3 @@ print("net saved")
 # torch.save(precrecs_te,"./precrecs_te.pt")
 #
 # plot_pr_curve(*precrecs_te);
-
-
