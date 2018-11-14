@@ -170,4 +170,8 @@ torch.save(Xtr[-2048000:],"Xtrt.pt")
 torch.save(ytr_conf[-2048000:],"ytrt_conf.pt")
 torch.save(ytr_offs[-2048000:],"ytrt_offs.pt")
 
+yva_conf, yva_offs = map(np.concatenate, zip(*list(map(generate_votes, va_scans, va_wcs, va_was))))
+torch.save(yva_conf,"yva_conf.pt")
+torch.save(yva_offs,"yva_offs.pt")
+
 

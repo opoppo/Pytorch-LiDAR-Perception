@@ -8,6 +8,7 @@ import visdom
 from tensorboardX import SummaryWriter
 import lbtoolbox.util as lbu
 import utils as u
+import math
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
@@ -81,11 +82,11 @@ def CalcAP(precslist, recslist):
     acum_area = 0
     prevpr, prevre = 1, 0
     for pr, re in zip(precslist, recslist):
-        if re[0] > prevre:
+        if re[0] > prevre and (not math.isnan(pr[0])) and (not math.isnan(re[0])):
             acum_area += 0.5 * (pr[0] + prevpr) * (re[0] - prevre)
             prevpr = pr[0]
             prevre = re[0]
-    return acum_area if acum_area <= 1 else 1
+    return acum_area
 
 
 def compute_precrecs(
@@ -148,17 +149,17 @@ class Mknet(nn.Module):
         self.conv2 = nn.Sequential(
             Reshape(-1, 1, 1, win_res),
             Slot(1, 64, 5),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(64, 64, 5),
             nn.MaxPool2d((1, 2)),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(64, 128, 5),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(128, 128, 3),
             nn.MaxPool2d((1, 2)),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(128, 256, 5),
-            # nn.Dropout2d(0.25)
+            nn.Dropout2d(0.25)
         )
         self.ConfidenceOutput = nn.Sequential(
             nn.Conv2d(256, 3, (1, 3)),
@@ -182,6 +183,8 @@ Xtr = np.load("./Xtr.npy")
 # Xtr = torch.load('Xtrt.pt')
 ytr_conf = torch.load('ytr_conf.pt')
 ytr_offs = torch.load('ytr_offs.pt')
+yva_conf = torch.load('yva_conf.pt')
+yva_offs = torch.load('yva_offs.pt')
 Xva = torch.load('Xva.pt')
 Xte = torch.load('Xte.pt')
 
@@ -225,15 +228,31 @@ test_loader = data.DataLoader(
     # pin_memory=True
 )
 
+DataTensor1 = torch.cuda.FloatTensor(Xva).view((-1,48))
+OffsTargetTensor1 = torch.cuda.FloatTensor(yva_offs)
+ConfTargetTensor1 = torch.cuda.FloatTensor(yva_conf)
+del yva_conf, yva_offs, Xva
+
+valset = data.TensorDataset(DataTensor1, OffsTargetTensor1, ConfTargetTensor1)
+
+val_loader = data.DataLoader(
+    dataset=valset,
+    batch_size=100,  # 120000 for 4 GPUs ; 80000 for 3 GPUs
+    shuffle=True,
+    drop_last=False,
+    # pin_memory=True,
+    # num_workers=12
+)
+
 # net = Mknet(win_res=48)#=====================================
 
 # net=torchvision.models.resnet50(pretrained=True)
 # net.conv1=(3,)
 
 # net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
-net = torch.load('net-20-0.01-30-0.001')
-optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
-loss_class = nn.NLLLoss(torch.Tensor((0.5, 10, 10)).cuda(non_blocking=True))
+net = torch.load('net-5')
+optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
+loss_class = nn.NLLLoss(weight=torch.Tensor((0.5, 10, 10)).cuda(non_blocking=True))
 loss_offset = nn.MSELoss(reduction='sum')
 
 Pthresh = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.99, 0.999)
@@ -248,7 +267,7 @@ if training:
 
     EPOCH = 100
     break_flag = False
-    prevap = 0
+    prevvalloss, prevtrainloss = 9999, 9999
     ppp = 0
     waitfor = 5  # rounds to wait for further improvement before quit training=================================
 
@@ -278,9 +297,10 @@ if training:
 
             a = loss_class(outConf.mul_((1 - outConf.exp()).pow_(2)), yConfl)  # Focal loss
             if n > 0:
-                b = ((loss_offset(outOffs.mul_(mask), yOffs.mul_(tgt_noise))).div_(n)).sqrt_()  # RMSE loss
+                b = ((loss_offset(outOffs.mul_(mask), yOffs.mul_(tgt_noise))).div_(
+                    n)).sqrt_()  # RMSE loss
             else:
-                b = 0
+                b = (loss_offset(outOffs.mul_(mask), yOffs)).sqrt_()
             del tgt_noise, mask, n, yConfl, yOffs
             # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
             loss = a + b
@@ -300,34 +320,65 @@ if training:
               "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min")
 
         # writer.add_histogram('zz/x', , epoch)
-        writer.add_scalar('data/loss', epochTloss, epoch)
+        writer.add_scalar('data/trainloss', epochTloss, epoch)
         # writer.add_scalars('data/scalar_group', {'x': x , 'y': y , 'loss': loss.item()}, epoch)
         # writer.add_text('zz/text', 'zz: this is epoch ' + str(epoch), epoch)
 
         if (epoch + 1) % 5 == 0:
 
             net.eval()
-            precslist, recslist = [], []
-            rs = 0.5
+            epochvalloss = 0
+            valaloss,valbloss=0,0
+            # precslist, recslist = [], []
+            # rs = 0.5
 
-            for i, ts in enumerate(Pthresh):
-                precs, recs = calcPreRec(Xva, va_scans, va_wcs, va_was, _r=rs, ts=ts)
-                # print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set with
-                # non-empty prob-thresh ",
-                #       ts, "  r=", rs)
-                precslist.append([precs])
-                recslist.append([recs])
+            # for i, ts in enumerate(Pthresh):
+            #     precs, recs = calcPreRec(Xva, va_scans, va_wcs, va_was, _r=rs, ts=ts)
+            #     # print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set with
+            #     # non-empty prob-thresh ",
+            #     #       ts, "  r=", rs)
+            #     precslist.append([precs])
+            #     recslist.append([recs])
+            #
+            # x, y = torch.Tensor(recslist), torch.Tensor(precslist)
+            # vis.line(Y=y, X=x)
+            #
+            # ap = CalcAP(precslist, recslist)
+            # print("AP : %.6f" % ap, " on validation set with r=", rs)
 
-            x, y = torch.Tensor(recslist), torch.Tensor(precslist)
-            vis.line(Y=y, X=x)
+            for step, (x, yOffs, yConf) in enumerate(val_loader):
 
-            ap = CalcAP(precslist, recslist)
-            print("AP : %.6f" % ap, " on validation set with r=", rs)
+                (outConf, outOffs) = net(x)
+                del x
+                # torch.Size([15360, 3]) torch.Size([15360, 2])
+                yConfl = yConf.type(torch.cuda.LongTensor)
 
-            if ap >= prevap:
+                mask = ((yConf != 0).view((-1, 1))).type(torch.cuda.FloatTensor)  # Tensor Type match!!!!
+                del yConf
+                n = mask.sum()
+
+                a = loss_class(outConf.mul_((1 - outConf.exp()).pow_(2)), yConfl)  # Focal loss
+                if n > 0:
+                    b = ((loss_offset(outOffs.mul_(mask), yOffs)).div_(
+                        n)).sqrt_()  # RMSE loss
+                else:
+                    b = (loss_offset(outOffs.mul_(mask), yOffs)).sqrt_()  # RMSE loss 0
+                del mask, n, yConfl, yOffs
+                # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
+                loss = a + b
+                epochvalloss += loss.item()
+                valaloss += a.item()
+                valbloss += b.item()
+
+            print("  loss_softmax: %.4f" % valaloss, "  loss_offset: %.4f" % valbloss,
+                  "  loss_total: %.4f" % epochvalloss," on validation")
+
+            writer.add_scalar('data/valloss', epochvalloss, epoch)
+            if epochvalloss <= prevvalloss and epochTloss <= prevtrainloss:
                 torch.save(net, "nettmp")
                 print("===improved model saved===")
-                prevap = ap
+                prevtrainloss = epochTloss
+                prevvalloss = epochvalloss
                 ppp = 0
             else:
                 ppp += 1
