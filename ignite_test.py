@@ -9,7 +9,7 @@ from tensorboardX import SummaryWriter
 import lbtoolbox.util as lbu
 import utils as u
 import math
-import pcl
+from ignite.engine import  Events, create_supervised_trainer, create_supervised_evaluator
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
@@ -150,17 +150,17 @@ class Mknet(nn.Module):
         self.conv2 = nn.Sequential(
             Reshape(-1, 1, 1, win_res),
             Slot(1, 64, 5),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(64, 64, 5),
             nn.MaxPool2d((1, 2)),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(64, 128, 5),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(128, 128, 3),
             nn.MaxPool2d((1, 2)),
-            # nn.Dropout2d(0.25),
+            nn.Dropout2d(0.25),
             Slot(128, 256, 5),
-            # nn.Dropout2d(0.25)
+            nn.Dropout2d(0.25)
         )
         self.ConfidenceOutput = nn.Sequential(
             nn.Conv2d(256, 3, (1, 3)),
@@ -245,187 +245,23 @@ val_loader = data.DataLoader(
     # num_workers=12
 )
 
-def weights_init(m):
-    if isinstance(m, nn.Conv2d):
-        torch.nn.init.kaiming_normal_(m.weight.data)
 
-
-net = Mknet(win_res=48)#=====================================
+# net = Mknet(win_res=48)#=====================================
 
 # net=torchvision.models.resnet50(pretrained=True)
 # net.conv1=(3,)
 
-net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
-# net = torch.load('net-10')
-net.apply(weights_init)
+# net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1])
+net = torch.load('net-10')
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
 loss_class = nn.NLLLoss(weight=torch.Tensor((0.5, 10, 10)).cuda(non_blocking=True))
 loss_offset = nn.MSELoss(reduction='sum')
+loss=loss_class+loss_offset
 
 Pthresh = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 0.999)
 Rthresh = (0.5, 0.3)
 
 # ====================================================================================================
-training = 1  # ????========================================================================================
+training = 0  # ????========================================================================================
 # ====================================================================================================
-
-# training
-if training:
-
-    EPOCH = 100
-    break_flag = False
-    prevvalloss, prevtrainloss = 9999, 9999
-    ppp = 0
-    waitfor = 5  # rounds to wait for further improvement before quit training=================================
-
-    totaltime, losslist = [], []
-
-    for epoch in range(EPOCH):
-        if break_flag is True:
-            break
-
-        net.train()
-        time_start = time.time()
-        epochTloss, epochAloss, epochBloss = 0, 0, 0
-
-        for step, (x, yOffs, yConf) in enumerate(train_loader):
-            if break_flag is True:
-                break
-
-            (outConf, outOffs) = net(x)
-            del x
-            # torch.Size([15360, 3]) torch.Size([15360, 2])
-            yConfl = yConf.type(torch.cuda.LongTensor)
-
-            tgt_noise = ((torch.randn(*yOffs.shape)).div_(20)).exp_().type(torch.cuda.FloatTensor)
-            mask = ((yConf != 0).view((-1, 1))).type(torch.cuda.FloatTensor)  # Tensor Type match!!!!
-            del yConf
-            n = mask.sum()
-
-            a = loss_class(outConf.mul_((1 - outConf.exp()).pow_(2)), yConfl)  # Focal loss
-            if n > 0:
-                b = ((loss_offset(outOffs.mul_(mask), yOffs.mul_(tgt_noise))).div_(
-                    n)).sqrt_()  # RMSE loss
-            else:
-                b = (loss_offset(outOffs.mul_(mask), yOffs)).sqrt_()
-            del tgt_noise, mask, n, yConfl, yOffs
-            # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
-            loss = a + b
-            epochTloss += loss.item()
-            epochAloss += a.item()
-            epochBloss += b.item()
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        time_end = time.time()
-        totaltime.append(time_end - time_start)
-        losslist.append((epoch, epochAloss, epochBloss, epochTloss))
-        print("EPOCH", epoch, "  loss_softmax: %.4f" % epochAloss, "  loss_offset: %.4f" % epochBloss,
-              "  loss_total: %.4f" % epochTloss, "  epoch_time: %.2f" % (time_end - time_start),
-              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min")
-
-        # writer.add_histogram('zz/x', , epoch)
-        writer.add_scalar('data/trainloss', epochTloss, epoch)
-        # writer.add_scalars('data/scalar_group', {'x': x , 'y': y , 'loss': loss.item()}, epoch)
-        # writer.add_text('zz/text', 'zz: this is epoch ' + str(epoch), epoch)
-
-        if (epoch + 1) % 5 == 0:
-
-            net.eval()
-            epochvalloss = 0
-            valaloss,valbloss=0,0
-            # precslist, recslist = [], []
-            # rs = 0.5
-
-            # for i, ts in enumerate(Pthresh):
-            #     precs, recs = calcPreRec(Xva, va_scans, va_wcs, va_was, _r=rs, ts=ts)
-            #     # print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on validation set with
-            #     # non-empty prob-thresh ",
-            #     #       ts, "  r=", rs)
-            #     precslist.append([precs])
-            #     recslist.append([recs])
-            #
-            # x, y = torch.Tensor(recslist), torch.Tensor(precslist)
-            # vis.line(Y=y, X=x)
-            #
-            # ap = CalcAP(precslist, recslist)
-            # print("AP : %.6f" % ap, " on validation set with r=", rs)
-
-            for step, (x, yOffs, yConf) in enumerate(val_loader):
-
-                (outConf, outOffs) = net(x)
-                del x
-                # torch.Size([15360, 3]) torch.Size([15360, 2])
-                yConfl = yConf.type(torch.cuda.LongTensor)
-
-                mask = ((yConf != 0).view((-1, 1))).type(torch.cuda.FloatTensor)  # Tensor Type match!!!!
-                del yConf
-                n = mask.sum()
-
-                a = loss_class(outConf.mul_((1 - outConf.exp()).pow_(2)), yConfl)  # Focal loss
-                if n > 0:
-                    b = ((loss_offset(outOffs.mul_(mask), yOffs)).div_(
-                        n)).sqrt_()  # RMSE loss
-                else:
-                    b = (loss_offset(outOffs.mul_(mask), yOffs)).sqrt_()  # RMSE loss 0
-                del mask, n, yConfl, yOffs
-                # print(outConf.shape, yConfl.shape,mask.shape) #torch.Size([15360, 3]) torch.Size([15360]) which is correct
-                loss = a + b
-                epochvalloss += loss.item()
-                valaloss += a.item()
-                valbloss += b.item()
-
-            print("  loss_softmax: %.4f" % valaloss, "  loss_offset: %.4f" % valbloss,
-                  "  loss_total: %.4f" % epochvalloss," on validation")
-
-            writer.add_scalar('data/valloss', epochvalloss, epoch)
-            if epochvalloss <= prevvalloss and epochTloss <= prevtrainloss:
-                torch.save(net, "nettmp")
-                print("===improved model saved===")
-                prevtrainloss = epochTloss
-                prevvalloss = epochvalloss
-                ppp = 0
-            else:
-                ppp += 1
-                print("===tried round ", ppp, " ===")
-                if ppp >= waitfor:
-                    net = torch.load('nettmp')
-                    print("===dead end, rolling back to previous model===")
-                    break_flag = True
-
-    torch.save(losslist, "losslist.pt")
-
-# Predicting
-# if (!training):
-#     net=torch.load('net-all-15-v0.1')
-#     print("net loaded")
-
-
-net.eval()
-result = []
-for j, rs in enumerate(Rthresh):
-    precslist, recslist = [], []
-    for i, ts in enumerate(Pthresh):
-        precs, recs = calcPreRec(Xte, te_scans, te_wcs, te_was, _r=rs, ts=ts)
-        print("precision | recall : %.4f" % precs, " | %.4f" % recs, "on test set with non-empty prob-thresh ", ts,
-              "  r=", rs)
-
-        precslist.append([precs])
-        recslist.append([recs])
-
-    x, y = torch.Tensor(recslist), torch.Tensor(precslist)
-    vis.line(Y=y, X=x)
-
-    ap = CalcAP(precslist, recslist)
-    print("Average Precision : %.6f" % ap, " on test set with r=", rs)
-    result.append([precslist, recslist, rs, ap])
-    break
-
-torch.save(result, "result.pt")
-torch.save(net, "nettt")
-print("====final model saved====")
-
-writer.export_scalars_to_json("./test.json")
-writer.close()
+trainer = create_supervised_trainer(net, optimizer, loss)
