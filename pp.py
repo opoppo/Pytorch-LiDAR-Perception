@@ -44,10 +44,10 @@ class bBox2D(object):
         self.vertex3 = self.Rotate(self.vertex3, self.center, self.alpha)
         self.vertex4 = self.Rotate(self.vertex4, self.center, self.alpha)
 
-        self.vertex1=(int(self.vertex1[0]*ratio+180),int(self.vertex1[1]*ratio+20))
-        self.vertex2=(int(self.vertex2[0]*ratio+180),int(self.vertex2[1]*ratio+20))
-        self.vertex3=(int(self.vertex3[0]*ratio+180),int(self.vertex3[1]*ratio+20))
-        self.vertex4=(int(self.vertex4[0]*ratio+180),int(self.vertex4[1]*ratio+20))
+        self.vertex1=(int(self.vertex1[0]*ratio+90),int(self.vertex1[1]*ratio+20))
+        self.vertex2=(int(self.vertex2[0]*ratio+90),int(self.vertex2[1]*ratio+20))
+        self.vertex3=(int(self.vertex3[0]*ratio+90),int(self.vertex3[1]*ratio+20))
+        self.vertex4=(int(self.vertex4[0]*ratio+90),int(self.vertex4[1]*ratio+20))
 
     def Rotate(self,point,origin,alpha):
         return ((point[0] - origin[0]) * math.cos(alpha*math.pi/180) - (point[1] - origin[1]) * math.sin(alpha*math.pi/180) + origin[0],
@@ -78,12 +78,15 @@ b = torch.FloatTensor(cloudata)
 # c=torch.FloatTensor(anndata)
 # cv2.namedWindow('scan')
 for i, scan in enumerate(cloudata):
-    emptyImage = np.zeros([320, 360, 3], np.uint8)
+    emptyImage = np.zeros([200, 180, 3], np.uint8)
     for dot in scan:
-        if dot[0] < 50 and dot[1] < 30 and dot[1] > -30:
-            emptyImage[int(dot[0] * 300 / 50 + 20), int(dot[1] * 180 / 30 + 180)] = 255, 255, 0
+        if dot[0] < 30 and dot[1] < 15 and dot[1] > -15:
+            emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 90 / 15 + 90)] = 255, 255, 0
     for j, label in enumerate(anndata[i]):
-        box = bBox2D(label[1], label[2], label[4], label[5], label[7], label[8], 300 / 50)
+        if label[1]>=label[2]:
+            box = bBox2D(label[1], label[2], label[4], label[5], label[7], label[8], 300 / 50)
+        else:
+            box = bBox2D(label[2], label[1], label[4], label[5], label[7], label[8], 300 / 50)
 
         box.bBoxCalcVertxex(300 / 50)
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
@@ -92,8 +95,10 @@ for i, scan in enumerate(cloudata):
         cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
 
     outImage = cv2.flip(emptyImage, 0)
+    outImage = cv2.flip(outImage, 1)
     outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
     cv2.imshow('scan', outImage)
+    print(i)
     cv2.waitKey()
 cv2.destroyAllWindows()
 print(b.size(), '\t')
