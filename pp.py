@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import cv2
 import math
+# import  pretrainedmodels
 
 
 # class Point(object):
@@ -75,13 +76,14 @@ class bBox2D(object):
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
 b = torch.FloatTensor(cloudata)
+img=[]
 # c=torch.FloatTensor(anndata)
 # cv2.namedWindow('scan')
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 180, 3], np.uint8)
     for dot in scan:
         if dot[0] < 30 and dot[1] < 15 and dot[1] > -15:
-            emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 90 / 15 + 90)] = 255, 255, 0
+            emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 90 / 15 + 90)] = (int(math.hypot(dot[0],dot[1])*255/60), int(dot[0]*235/30+20), int(dot[1]*75/15+180))
     for j, label in enumerate(anndata[i]):
         if label[1]>=label[2]:
             box = bBox2D(label[1], label[2], label[4], label[5], label[7], label[8], 300 / 50)
@@ -98,10 +100,12 @@ for i, scan in enumerate(cloudata):
     outImage = cv2.flip(outImage, 1)
     outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
     cv2.imshow('scan', outImage)
+    img.append(outImage)
     print(i)
     cv2.waitKey()
 cv2.destroyAllWindows()
 print(b.size(), '\t')
+np.save('./testset/img',img)
 
 #
 # filename = 'D:/1544600733.580758018'
