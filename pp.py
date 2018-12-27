@@ -15,7 +15,7 @@ import math
 # points = []
 
 class bBox2D(object):
-    def __init__(self, length, width, xc, yc, theta,
+    def __init__(self, length, width, xc, yc,
                  alpha,
                  ratio):  # alpha is the bbox's orientation in degrees, theta is the relative angle to the sensor in rad
         self.yc = xc
@@ -23,7 +23,7 @@ class bBox2D(object):
         self.center=(self.xc,self.yc)
         self.width = length
         self.length = width
-        self.theta = theta
+        # self.theta = theta
         self.alpha = -alpha
 
     def bBoxCalcVertxex(self, ratio):
@@ -85,10 +85,10 @@ for i, scan in enumerate(cloudata):
         if dot[0] < 30 and dot[1] < 15 and dot[1] > -15:
             emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 90 / 15 + 90)] = (int(math.hypot(dot[0],dot[1])*255/60), int(dot[0]*235/30+20), int(dot[1]*75/15+180))
     for j, label in enumerate(anndata[i]):
-        if label[1]>=label[2]:
-            box = bBox2D(label[1], label[2], label[4], label[5], label[7], label[8], 300 / 50)
+        if label[0]>=label[1]:
+            box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
         else:
-            box = bBox2D(label[2], label[1], label[4], label[5], label[7], label[8], 300 / 50)
+            box = bBox2D(label[1], label[0], label[2], label[3], label[4], 300 / 50)
 
         box.bBoxCalcVertxex(300 / 50)
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
@@ -98,14 +98,17 @@ for i, scan in enumerate(cloudata):
 
     outImage = cv2.flip(emptyImage, 0)
     outImage = cv2.flip(outImage, 1)
-    outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
-    cv2.imshow('scan', outImage)
+    outImage = cv2.resize(outImage, (224, 224), interpolation=cv2.INTER_CUBIC)
+    # cv2.imshow('scan', outImage)
     img.append(outImage)
     print(i)
-    cv2.waitKey()
-cv2.destroyAllWindows()
+#     cv2.waitKey()
+# cv2.destroyAllWindows()
 print(b.size(), '\t')
 np.save('./testset/img',img)
+
+
+
 
 #
 # filename = 'D:/1544600733.580758018'
