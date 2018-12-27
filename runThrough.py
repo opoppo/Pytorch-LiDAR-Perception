@@ -88,6 +88,12 @@ class OutputLayer(nn.Module):
         y = self.fc(X)
         # print(y.size())
         return y
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
+
 # pathbox = 'D:/JupyterNotebook/testset/_bbox/'
 # pathpcd = 'D:/JupyterNotebook/testset/pcd/'
 #
@@ -159,24 +165,30 @@ net=torch.nn.DataParallel(net.cuda(),device_ids=[0,1,2,3])
 trainset=data.TensorDataset(imgtensor,anntensor)
 train_loader = data.DataLoader(
     dataset=trainset,
-    batch_size=256,
+    batch_size=256,  #256 for 4 GPUs
     shuffle=True,
     drop_last=False,
     # pin_memory=True,
     # num_workers=12
 )
+
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
 mseloss=nn.MSELoss(reduction='sum')
+lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
+scheduler=torch.optim.lr_scheduler.LambdaLR(optimizer,lambda1)
 
 
 # ====================================================================================================
 training = 1  # ????========================================================================================
 # ====================================================================================================
 
+# net=torch.load('nettmp')
+# # print('nettmp loaded')
+
 # Predicting
 if (not training):
     net=torch.load('nettt')
-    print('net loaded')
+    print('nettt loaded')
 
 # training
 if training:
@@ -190,6 +202,9 @@ if training:
     totaltime, losslist = [], []
 
     for epoch in range(EPOCH):
+
+        scheduler.step()
+
         if break_flag is True:
             break
 
@@ -232,8 +247,12 @@ if training:
         time_end = time.time()
         totaltime.append(time_end - time_start)
         losslist.append((epoch, epochTloss))
+        lr=get_lr(optimizer)
         print("EPOCH", epoch, "  loss_total: %.4f" % epochTloss, "  epoch_time: %.2f" % (time_end - time_start),
-              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min")
+              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min with lr=",lr)
+
+        torch.save(net, "nettmp")
+        # print("===new model saved===")
 
 
 torch.save(net, "nettt")
