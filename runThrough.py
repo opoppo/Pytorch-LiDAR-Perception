@@ -58,8 +58,8 @@ class OutputLayer(nn.Module):
         super(OutputLayer, self).__init__()
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
-            nn.Linear(2048, 25, bias=True),
-            Reshape(-1, 5, 5)
+            nn.Linear(2048, 60, bias=True),
+            Reshape(-1, 12, 5)
         )
 
     def forward(self, X):
@@ -100,24 +100,43 @@ trainset = data.TensorDataset(imgtensor, anntensor)
 train_loader = data.DataLoader(
     dataset=trainset,
     batch_size=256,  # 256 for 4 GPUs
-    shuffle=True,
+    shuffle=False,
     drop_last=False,
     # pin_memory=True,
     # num_workers=12
+    sampler=data.SubsetRandomSampler(list(range(0, 3000, 1)))
+)
+val_loader = data.DataLoader(
+    dataset=trainset,
+    batch_size=256,  # 256 for 4 GPUs
+    shuffle=False,
+    drop_last=False,
+    # pin_memory=True,
+    # num_workers=12
+    sampler=data.SubsetRandomSampler(list(range(3000, 3500, 1)))
+)
+test_loader = data.DataLoader(
+    dataset=trainset,
+    batch_size=256,  # 256 for 4 GPUs
+    shuffle=False,
+    drop_last=False,
+    # pin_memory=True,
+    # num_workers=12
+    sampler=data.SubsetRandomSampler(list(range(3500, 4239, 1)))
 )
 
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
 mseloss = nn.MSELoss(reduction='sum')
 # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
-lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (0))
+lambda1 = lambda epoch: get_triangular_lr(epoch, 30, 10 ** (-2), 10 ** (0))
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
 # ====================================================================================================
 training = 1  # ????========================================================================================
 # ====================================================================================================
 
-net=torch.load('nettt')
-print('nettmp loaded')
+# net = torch.load('nettt')
+# print('nettmp loaded')#===================
 
 # Predicting
 if (not training):
@@ -155,6 +174,7 @@ if training:
             # print(bboxes_out.size())
             del x
 
+            # print(bboxes_out.size(),bboxes.size())
             loss = mseloss(bboxes_out, bboxes)
             epochTloss += loss.item()
 
@@ -167,12 +187,58 @@ if training:
         losslist.append((epoch, epochTloss))
         lr = get_lr(optimizer)
         print("EPOCH", epoch, "  loss_total: %.4f" % epochTloss, "  epoch_time: %.2f" % (time_end - time_start),
-              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min with lr=",
-              lr)
+              "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min with lr=%e"
+              % lr)
 
-        torch.save(net, "nettmp")
+        # torch.save(net, "nettmp")
         # print("===new model saved===")
+        if (epoch + 1) % 5 == 0:
 
+            net.eval()
+            epochvalloss = 0
+
+            for step, (x, bboxes) in enumerate(val_loader):
+                bboxes_out = net(x)
+                del x
+
+                loss = mseloss(bboxes_out, bboxes)
+                epochvalloss += loss.item()
+
+            print("loss_total: %.4f" % epochvalloss, " on validation")
+
+            # writer.add_scalar('data/valloss', epochvalloss, epoch)
+            if epochvalloss <= prevvalloss and epochTloss <= prevtrainloss:
+                torch.save(net, "nettmp")
+                print("===improved model saved===")
+                prevtrainloss = epochTloss
+                prevvalloss = epochvalloss
+                ppp = 0
+            else:
+                ppp += 1
+                print("===tried round ", ppp, " ===")
+                if ppp >= waitfor:
+                    net = torch.load('nettmp')
+                    print("===dead end, rolling back to previous model===")
+                    break_flag = True
+
+    torch.save(losslist, "losslist.pt")
+
+#
+
+net.eval()
+result = []
+
+epochtestloss = 0
+
+for step, (x, bboxes) in enumerate(test_loader):
+    bboxes_out = net(x)
+    del x
+
+    loss = mseloss(bboxes_out, bboxes)
+    epochtestloss += loss.item()
+
+print("loss_total: %.4f" % epochtestloss, " on testset")
+
+torch.save(result, "result.pt")
 torch.save(net, "nettt")
 print("====final model saved====")
-#

@@ -85,24 +85,28 @@ for i, scan in enumerate(cloudata):
         if dot[0] < 30 and dot[1] < 15 and dot[1] > -15:
             emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 90 / 15 + 90)] = (int(math.hypot(dot[0],dot[1])*255/60), int(dot[0]*235/30+20), int(dot[1]*75/15+180))
     for j, label in enumerate(anndata[i]):
-        if label[0]>=label[1]:
-            box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-        else:
+        if label[0]<label[1] and (label[4]==-90 or label[4]==0 or label[4]==90 or label[4]==-180):
             box = bBox2D(label[1], label[0], label[2], label[3], label[4], 300 / 50)
+        # elif label[4]==90 or label[4]==-90:
+        #     box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
+        else:
+            box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
 
+        anndata[i][j]=[box.length,box.width,box.xc,box.yc,box.alpha]
         box.bBoxCalcVertxex(300 / 50)
-        cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
 
     outImage = cv2.flip(emptyImage, 0)
     outImage = cv2.flip(outImage, 1)
     outImage = cv2.resize(outImage, (224, 224), interpolation=cv2.INTER_CUBIC)
+    # outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
     # cv2.imshow('scan', outImage)
     img.append(outImage)
     print(i)
-#     cv2.waitKey()
+    # cv2.waitKey()
 # cv2.destroyAllWindows()
 print(b.size(), '\t')
 np.save('./testset/img',img)
