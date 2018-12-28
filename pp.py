@@ -101,8 +101,9 @@ for i, scan in enumerate(cloudata):
 
     # outImage = cv2.flip(emptyImage, 0)
     # outImage = cv2.flip(outImage, 1)
-    outImage = cv2.resize(outImage, (224, 224), interpolation=cv2.INTER_CUBIC)
-    #outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
+    # outImage = cv2.resize(emptyImage, (224, 224), interpolation=cv2.INTER_CUBIC)  # ResNet
+    outImage = cv2.resize(emptyImage, (299, 299), interpolation=cv2.INTER_CUBIC)   # Inception
+    #outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)   # Visualization ONLY!
     #cv2.imshow('scan', outImage)
     img.append(outImage)
     print(i)
