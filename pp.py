@@ -94,22 +94,24 @@ for i, scan in enumerate(cloudata):
 
         anndata[i][j]=[box.length,box.width,box.xc,box.yc,box.alpha]
         box.bBoxCalcVertxex(300 / 50)
-        cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
+        #cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
+        #cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
+        #cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
+        #cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
 
-    outImage = cv2.flip(emptyImage, 0)
-    outImage = cv2.flip(outImage, 1)
-    # outImage = cv2.resize(outImage, (224, 224), interpolation=cv2.INTER_CUBIC)
-    outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
-    cv2.imshow('scan', outImage)
+    # outImage = cv2.flip(emptyImage, 0)
+    # outImage = cv2.flip(outImage, 1)
+    outImage = cv2.resize(outImage, (224, 224), interpolation=cv2.INTER_CUBIC)
+    #outImage = cv2.resize(outImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
+    #cv2.imshow('scan', outImage)
     img.append(outImage)
     print(i)
-    cv2.waitKey()
-cv2.destroyAllWindows()
+    #cv2.waitKey()
+#cv2.destroyAllWindows()
 print(b.size(), '\t')
+#TODO: data augmentation, noise
 np.save('./testset/img',img)
+np.save('./testset/anndatafixed',anndata)
 
 
 

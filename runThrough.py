@@ -100,7 +100,7 @@ imgtensor = torch.FloatTensor(img)
 imgtensor = imgtensor.permute(0, 3, 2, 1)
 print(imgtensor.size())
 del img
-anndata = np.load('./testset/anndata.npy')
+anndata = np.load('./testset/anndatafixed.npy')
 anntensor = torch.FloatTensor(anndata).cuda()
 del anndata
 
@@ -111,6 +111,8 @@ if training and not resume:
 
 rawset = data.TensorDataset(imgtensor, anntensor)
 (trainset, valset, testset) = data.random_split(rawset, [3000, 600, len(rawset) - 3600])
+# TODO: fixed random set
+
 print(len(trainset), len(valset), len(testset))
 
 train_loader = data.DataLoader(
@@ -246,9 +248,9 @@ for step, (x, bboxes) in enumerate(test_loader):
     x=x.squeeze_().permute(2,1,0)
     emptyImage = x.cpu().detach().numpy()
     #print(emptyImage.shape,type(emptyImage))
+
     emptyImage = cv2.resize(emptyImage, (200, 180), interpolation=cv2.INTER_CUBIC)
-    emptyImage = cv2.flip(emptyImage, 0)
-    emptyImage = cv2.flip(emptyImage, 1)
+
     del x
     for j, label in enumerate(bboxes.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
@@ -259,6 +261,7 @@ for step, (x, bboxes) in enumerate(test_loader):
         cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
 
+
     for j, label in enumerate(bboxes_out.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
 
@@ -268,6 +271,9 @@ for step, (x, bboxes) in enumerate(test_loader):
         cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 55), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 55), 1, cv2.LINE_AA)
 
+    emptyImage = cv2.flip(emptyImage, 0)
+    emptyImage = cv2.flip(emptyImage, 1)
+
     outImage = cv2.resize(emptyImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
     # cv2.imshow('scan', outImage)
     print(step)
@@ -275,7 +281,7 @@ for step, (x, bboxes) in enumerate(test_loader):
     # cv2.waitKey()
 
     loss = mseloss(bboxes_out, bboxes)
-    epochtestloss += loss.item()
+    epochtestloss = loss.item()
 
 print("loss_total: %.4f" % epochtestloss, " on testset")
 
