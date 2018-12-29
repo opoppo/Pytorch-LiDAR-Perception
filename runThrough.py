@@ -19,18 +19,10 @@ class bBox2D(object):
         self.center = (self.xc, self.yc)
         self.width = width
         self.length = length
-        # self.theta = theta
+
         self.alpha = alpha
 
     def bBoxCalcVertxex(self):
-        # beta = math.atan2(self.width, self.length) * 180 / math.pi
-        # gamma = beta - self.alpha
-        # gamma1 = beta + self.alpha
-        # r = math.sqrt((self.width / 2) ** 2 + (self.length / 2) ** 2)
-        # self.vertex1 = (int(self.xc + (r * math.cos(gamma * math.pi / 180)*ratio)),int(self.yc + (r * math.sin(gamma * math.pi / 180)*ratio)))
-        # self.vertex2 = (int(self.xc + (r * math.cos(gamma1 * math.pi / 180)*ratio)), int(self.yc + (r * math.sin(gamma1* math.pi / 180)*ratio)))
-        # self.vertex3 = (int(self.xc - (r * math.cos(gamma * math.pi / 180)*ratio)), int(self.yc - (r * math.sin(gamma * math.pi / 180)*ratio)))
-        # self.vertex4 = (int(self.xc - (r * math.cos(gamma1 * math.pi / 180)*ratio)), int(self.yc - (r * math.sin(gamma1 * math.pi / 180)*ratio)))
         self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
         self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
         self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
@@ -284,15 +276,15 @@ for step, (x, bboxes) in enumerate(test_loader):
     bboxes_out = net(x)
     # print(bboxes_out.size(),bboxes.size())
     x = x.squeeze_().permute(2, 1, 0)
-    emptyImage = x.cpu().detach().numpy()
+    emptyImage = x.cpu().detach().numpy().copy()
     # print(emptyImage.shape,type(emptyImage))
 
-    emptyImage = cv2.resize(emptyImage, (180, 200), interpolation=cv2.INTER_CUBIC)
+    # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
 
     del x
     for j, label in enumerate(bboxes.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-        # box.Scale(300 / 50, 90, 20)
+        # box.Scale(300 / 50, 100, 20)
         box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
@@ -301,7 +293,8 @@ for step, (x, bboxes) in enumerate(test_loader):
 
     for j, label in enumerate(bboxes_out.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-        box.Scale(300 / 50, 90, 20)
+        # box.Scale(300 / 50, 100, 20)
+        # box.Scale(299 / 200, 0, 0)
         box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 55), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 55), 1, cv2.LINE_AA)

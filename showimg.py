@@ -17,14 +17,6 @@ class bBox2D(object):
         self.alpha = alpha
 
     def bBoxCalcVertxex(self):
-        # beta = math.atan2(self.width, self.length) * 180 / math.pi
-        # gamma = beta - self.alpha
-        # gamma1 = beta + self.alpha
-        # r = math.sqrt((self.width / 2) ** 2 + (self.length / 2) ** 2)
-        # self.vertex1 = (int(self.xc + (r * math.cos(gamma * math.pi / 180)*ratio)),int(self.yc + (r * math.sin(gamma * math.pi / 180)*ratio)))
-        # self.vertex2 = (int(self.xc + (r * math.cos(gamma1 * math.pi / 180)*ratio)), int(self.yc + (r * math.sin(gamma1* math.pi / 180)*ratio)))
-        # self.vertex3 = (int(self.xc - (r * math.cos(gamma * math.pi / 180)*ratio)), int(self.yc - (r * math.sin(gamma * math.pi / 180)*ratio)))
-        # self.vertex4 = (int(self.xc - (r * math.cos(gamma1 * math.pi / 180)*ratio)), int(self.yc - (r * math.sin(gamma1 * math.pi / 180)*ratio)))
         self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
         self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
         self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
@@ -58,11 +50,12 @@ img = np.load('./testset/img.npy')
 anndata = np.load('./testset/anndatafixed.npy')
 
 for i, im in enumerate(img):
-    emptyImage = cv2.resize(im, (180, 200), interpolation=cv2.INTER_CUBIC)
+    # emptyImage = cv2.resize(im, (200, 200), interpolation=cv2.INTER_CUBIC)
+    emptyImage = im
     del im
     for j, label in enumerate(anndata[i]):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-        # box.Scale(1,90/6,20/6)
+        box.Scale(299 / 200, 0, 0)
         box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
