@@ -14,15 +14,15 @@ class bBox2D(object):
     def __init__(self, length, width, xc, yc,
                  alpha,
                  ratio):  # alpha is the bbox's orientation in degrees, theta is the relative angle to the sensor in rad
-        self.yc = xc
-        self.xc = yc
+        self.yc = yc
+        self.xc = xc
         self.center = (self.xc, self.yc)
-        self.width = length
-        self.length = width
+        self.width = width
+        self.length = length
         # self.theta = theta
-        self.alpha = -alpha
+        self.alpha = alpha
 
-    def bBoxCalcVertxex(self, ratio):
+    def bBoxCalcVertxex(self):
         # beta = math.atan2(self.width, self.length) * 180 / math.pi
         # gamma = beta - self.alpha
         # gamma1 = beta + self.alpha
@@ -41,10 +41,17 @@ class bBox2D(object):
         self.vertex3 = self.Rotate(self.vertex3, self.center, self.alpha)
         self.vertex4 = self.Rotate(self.vertex4, self.center, self.alpha)
 
-        self.vertex1 = (int(self.vertex1[0] * ratio + 90), int(self.vertex1[1] * ratio + 20))
-        self.vertex2 = (int(self.vertex2[0] * ratio + 90), int(self.vertex2[1] * ratio + 20))
-        self.vertex3 = (int(self.vertex3[0] * ratio + 90), int(self.vertex3[1] * ratio + 20))
-        self.vertex4 = (int(self.vertex4[0] * ratio + 90), int(self.vertex4[1] * ratio + 20))
+        self.vertex1 = (int(self.vertex1[0]), int(self.vertex1[1]))
+        self.vertex2 = (int(self.vertex2[0]), int(self.vertex2[1]))
+        self.vertex3 = (int(self.vertex3[0]), int(self.vertex3[1]))
+        self.vertex4 = (int(self.vertex4[0]), int(self.vertex4[1]))
+
+    def Scale(self, ratio, offsx, offsy):
+        self.yc = self.yc * ratio + offsy
+        self.xc = self.xc * ratio + offsx
+        self.center = (self.xc, self.yc)
+        self.width = self.width * ratio
+        self.length = self.length * ratio
 
     def Rotate(self, point, origin, alpha):
         return ((point[0] - origin[0]) * math.cos(alpha * math.pi / 180) - (point[1] - origin[1]) * math.sin(
@@ -106,9 +113,9 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 
 # ====================================================================================================
-training = 1  # ????========================================================================================
-resume = 0  # ====010:  test model   110: train model   10X: train new
-generateNewSets = 0  # reshuffle the sets' split!!!!!!!!!!!!!!!
+training = 0  # ????========================================================================================
+resume = 1  # ====010:  test model   110: train model   10X: train new   011: refresh dataset
+generateNewSets = 1  # REGENERATE the datasets !!!!!!!!!!!!!!!
 # ====================================================================================================
 
 
@@ -128,7 +135,7 @@ if training and not resume:
     # net.fc = OutputLayer()
     # net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')   #156  20s
     # net.last_linear = OutputLayer()
-    net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')   #186  20s
+    net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
     net.last_linear = OutputLayerInceptionv4()
     net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1, 2, 3])
 
@@ -165,7 +172,7 @@ val_loader = data.DataLoader(
     # sampler=data.SubsetRandomSampler(list(range(3000, 3500, 1)))
 )
 test_loader = data.DataLoader(
-    dataset=testset,
+    dataset=trainset,
     batch_size=1,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
@@ -180,7 +187,7 @@ if resume and training:
 
 # Predicting or Testing============
 if (not training) and resume:
-    net = torch.load('net-0.1')
+    net = torch.load('nettmp')
     print('nettt loaded')
 
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
@@ -192,7 +199,7 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 # training
 if training:
 
-    EPOCH = 2000
+    EPOCH = 1000
     break_flag = False
     prevvalloss, prevtrainloss = 10e30, 10e30
     ppp = 0
@@ -280,13 +287,13 @@ for step, (x, bboxes) in enumerate(test_loader):
     emptyImage = x.cpu().detach().numpy()
     # print(emptyImage.shape,type(emptyImage))
 
-    emptyImage = cv2.resize(emptyImage, (200, 180), interpolation=cv2.INTER_CUBIC)
+    emptyImage = cv2.resize(emptyImage, (180, 200), interpolation=cv2.INTER_CUBIC)
 
     del x
     for j, label in enumerate(bboxes.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-
-        box.bBoxCalcVertxex(300 / 50)
+        # box.Scale(300 / 50, 90, 20)
+        box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
@@ -294,8 +301,8 @@ for step, (x, bboxes) in enumerate(test_loader):
 
     for j, label in enumerate(bboxes_out.squeeze_().detach().cpu().numpy()):
         box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
-
-        box.bBoxCalcVertxex(300 / 50)
+        box.Scale(300 / 50, 90, 20)
+        box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 55), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 55), 1, cv2.LINE_AA)
         cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 55), 1, cv2.LINE_AA)
