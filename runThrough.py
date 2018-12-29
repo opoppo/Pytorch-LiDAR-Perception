@@ -2,54 +2,12 @@ import os
 import numpy as np
 import torch
 import cv2
-import math
 import torchvision
 import torch.utils.data as data
 import torch.nn as nn
 import time
 import pretrainedmodels
-
-
-class bBox2D(object):
-    def __init__(self, length, width, xc, yc,
-                 alpha,
-                 ratio):  # alpha is the bbox's orientation in degrees, theta is the relative angle to the sensor in rad
-        self.yc = yc
-        self.xc = xc
-        self.center = (self.xc, self.yc)
-        self.width = width
-        self.length = length
-
-        self.alpha = alpha
-
-    def bBoxCalcVertxex(self):
-        self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
-        self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
-        self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
-        self.vertex4 = (self.xc - self.length / 2, self.yc - self.width / 2)
-
-        self.vertex1 = self.Rotate(self.vertex1, self.center, self.alpha)
-        self.vertex2 = self.Rotate(self.vertex2, self.center, self.alpha)
-        self.vertex3 = self.Rotate(self.vertex3, self.center, self.alpha)
-        self.vertex4 = self.Rotate(self.vertex4, self.center, self.alpha)
-
-        self.vertex1 = (int(self.vertex1[0]), int(self.vertex1[1]))
-        self.vertex2 = (int(self.vertex2[0]), int(self.vertex2[1]))
-        self.vertex3 = (int(self.vertex3[0]), int(self.vertex3[1]))
-        self.vertex4 = (int(self.vertex4[0]), int(self.vertex4[1]))
-
-    def Scale(self, ratio, offsx, offsy):
-        self.yc = self.yc * ratio + offsy
-        self.xc = self.xc * ratio + offsx
-        self.center = (self.xc, self.yc)
-        self.width = self.width * ratio
-        self.length = self.length * ratio
-
-    def Rotate(self, point, origin, alpha):
-        return ((point[0] - origin[0]) * math.cos(alpha * math.pi / 180) - (point[1] - origin[1]) * math.sin(
-            alpha * math.pi / 180) + origin[0],
-                (point[0] - origin[0]) * math.sin(alpha * math.pi / 180) + (point[1] - origin[1]) * math.cos(
-                    alpha * math.pi / 180) + origin[1])
+from bBox_2D import bBox_2D
 
 
 class Reshape(nn.Module):
@@ -67,7 +25,7 @@ class OutputLayer(nn.Module):
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
             nn.Linear(2048, 60, bias=True),
-            Reshape(-1, 12, 5)
+            Reshape(-1, 3, 5)
         )
 
     def forward(self, X):
@@ -82,7 +40,7 @@ class OutputLayerInceptionv4(nn.Module):
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
             nn.Linear(1536, 60, bias=True),
-            Reshape(-1, 12, 5)
+            Reshape(-1, 3, 5)
         )
 
     def forward(self, X):
@@ -105,9 +63,9 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 
 # ====================================================================================================
-training = 0  # ????========================================================================================
-resume = 1  # ====010:  test model   110: train model   10X: train new   011: refresh dataset
-generateNewSets = 1  # REGENERATE the datasets !!!!!!!!!!!!!!!
+training = 1  # ????========================================================================================
+resume = 0  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
+generateNewSets = 0  # REGENERATE the datasets !!!!!!!!!!!!!!!
 # ====================================================================================================
 
 
@@ -125,16 +83,18 @@ del anndata
 if training and not resume:
     # net = torchvision.models.resnet101(pretrained=True)   #256  10s
     # net.fc = OutputLayer()
-    # net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')   #156  20s
-    # net.last_linear = OutputLayer()
-    net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
-    net.last_linear = OutputLayerInceptionv4()
+    net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')  # 156  20s
+    net.last_linear = OutputLayer()
+    # net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
+    # net.last_linear = OutputLayerInceptionv4()
     net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1, 2, 3])
 
 rawset = data.TensorDataset(imgtensor, anntensor)
 
 if generateNewSets:
-    (trainset, valset, testset) = data.random_split(rawset, [3000, 600, len(rawset) - 3600])
+    (trainset, valset, testset) = data.random_split(rawset, [int(len(rawset) * 0.70), int(len(rawset) * 0.15),
+                                                             len(rawset) - int(len(rawset) * 0.70) - int(
+                                                                 len(rawset) * 0.15)])
     torch.save(trainset, './testset/dataset/trainset')
     torch.save(valset, './testset/dataset/valset')
     torch.save(testset, './testset/dataset/testset')
@@ -147,7 +107,7 @@ print(len(trainset), len(valset), len(testset))
 
 train_loader = data.DataLoader(
     dataset=trainset,
-    batch_size=186,  # 256 for 4 GPUs
+    batch_size=136,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
@@ -156,7 +116,7 @@ train_loader = data.DataLoader(
 )
 val_loader = data.DataLoader(
     dataset=valset,
-    batch_size=8,  # 256 for 4 GPUs
+    batch_size=4,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
@@ -164,7 +124,7 @@ val_loader = data.DataLoader(
     # sampler=data.SubsetRandomSampler(list(range(3000, 3500, 1)))
 )
 test_loader = data.DataLoader(
-    dataset=trainset,
+    dataset=testset,
     batch_size=1,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
@@ -174,18 +134,18 @@ test_loader = data.DataLoader(
 )
 
 if resume and training:
-    net = torch.load('nettmp')
+    net = torch.load('net-0.2')
     print('net resumed')  # ==============================================================
 
 # Predicting or Testing============
-if (not training) and resume:
-    net = torch.load('nettmp')
+if resume and (not training):
+    net = torch.load('net-0.2')
     print('nettt loaded')
 
-optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0.001)
 mseloss = nn.MSELoss(reduction='mean')
 # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
-lambda1 = lambda epoch: get_triangular_lr(epoch, 50, 10 ** (-3), 10 ** (0))
+lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (0))
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
 # training
@@ -201,14 +161,12 @@ if training:
 
     for epoch in range(EPOCH):
 
-        scheduler.step()
-
-        if break_flag is True:
-            break
-
         net.train()
+        scheduler.step()
         time_start = time.time()
         epochTloss = 0
+        if break_flag is True:
+            break
 
         for step, (x, bboxes) in enumerate(train_loader):
             if break_flag is True:
@@ -217,7 +175,7 @@ if training:
             bboxes_out = net(x)
             del x
 
-            # print(bboxes_out.size(),bboxes.size())
+            print(bboxes_out.size(),bboxes.size())
             loss = mseloss(bboxes_out, bboxes)
             # epochTloss += loss.item()
             epochTloss = loss.item()
@@ -266,10 +224,8 @@ if training:
     torch.save(losslist, "losslist.pt")
 
 #
-
 net.eval()
 result = []
-
 epochtestloss = 0
 
 for step, (x, bboxes) in enumerate(test_loader):
@@ -278,12 +234,11 @@ for step, (x, bboxes) in enumerate(test_loader):
     x = x.squeeze_().permute(2, 1, 0)
     emptyImage = x.cpu().detach().numpy().copy()
     # print(emptyImage.shape,type(emptyImage))
-
     # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
 
     del x
     for j, label in enumerate(bboxes.squeeze_().detach().cpu().numpy()):
-        box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
+        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         # box.Scale(300 / 50, 100, 20)
         box.bBoxCalcVertxex()
         cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
@@ -292,7 +247,7 @@ for step, (x, bboxes) in enumerate(test_loader):
         cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
 
     for j, label in enumerate(bboxes_out.squeeze_().detach().cpu().numpy()):
-        box = bBox2D(label[0], label[1], label[2], label[3], label[4], 300 / 50)
+        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         # box.Scale(300 / 50, 100, 20)
         # box.Scale(299 / 200, 0, 0)
         box.bBoxCalcVertxex()
@@ -303,7 +258,6 @@ for step, (x, bboxes) in enumerate(test_loader):
 
     emptyImage = cv2.flip(emptyImage, 0)
     emptyImage = cv2.flip(emptyImage, 1)
-
     outImage = cv2.resize(emptyImage, (1000, 1000), interpolation=cv2.INTER_CUBIC)
     # cv2.imshow('scan', outImage)
     print(step)
