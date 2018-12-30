@@ -24,7 +24,7 @@ class OutputLayer(nn.Module):
         super(OutputLayer, self).__init__()
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
-            nn.Linear(2048, 60, bias=True),
+            nn.Linear(2048, 15, bias=True),
             Reshape(-1, 3, 5)
         )
 
@@ -39,7 +39,7 @@ class OutputLayerInceptionv4(nn.Module):
         super(OutputLayerInceptionv4, self).__init__()
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
-            nn.Linear(1536, 60, bias=True),
+            nn.Linear(1536, 15, bias=True),
             Reshape(-1, 3, 5)
         )
 
@@ -64,34 +64,34 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 # ====================================================================================================
 training = 1  # ????========================================================================================
-resume = 0  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
+resume = 1  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
 generateNewSets = 0  # REGENERATE the datasets !!!!!!!!!!!!!!!
 # ====================================================================================================
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
-img = np.load('./testset/img.npy')
-imgtensor = torch.FloatTensor(img)
-imgtensor = imgtensor.permute(0, 3, 2, 1)
-print(imgtensor.size())
-del img
-anndata = np.load('./testset/anndatafixed.npy')
-anntensor = torch.FloatTensor(anndata).cuda()
-del anndata
-
 if training and not resume:
     # net = torchvision.models.resnet101(pretrained=True)   #256  10s
     # net.fc = OutputLayer()
-    net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')  # 156  20s
+    net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')  # 136  20s
     net.last_linear = OutputLayer()
     # net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
     # net.last_linear = OutputLayerInceptionv4()
     net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1, 2, 3])
 
-rawset = data.TensorDataset(imgtensor, anntensor)
-
 if generateNewSets:
+
+    img = np.load('./testset/img.npy')
+    imgtensor = torch.FloatTensor(img)
+    imgtensor = imgtensor.permute(0, 3, 2, 1)
+    print(imgtensor.size())
+    del img
+    anndata = np.load('./testset/anndatafixed.npy')
+    anntensor = torch.FloatTensor(anndata).cuda()
+    del anndata
+    rawset = data.TensorDataset(imgtensor, anntensor)
+
     (trainset, valset, testset) = data.random_split(rawset, [int(len(rawset) * 0.70), int(len(rawset) * 0.15),
                                                              len(rawset) - int(len(rawset) * 0.70) - int(
                                                                  len(rawset) * 0.15)])
@@ -103,7 +103,7 @@ else:
     valset = torch.load('./testset/dataset/valset')
     testset = torch.load('./testset/dataset/testset')
 
-print(len(trainset), len(valset), len(testset))
+print("datasets ", len(trainset), len(valset), len(testset))
 
 train_loader = data.DataLoader(
     dataset=trainset,
@@ -134,24 +134,24 @@ test_loader = data.DataLoader(
 )
 
 if resume and training:
-    net = torch.load('net-0.2')
+    net = torch.load('net-0.31')
     print('net resumed')  # ==============================================================
 
 # Predicting or Testing============
 if resume and (not training):
-    net = torch.load('net-0.2')
+    net = torch.load('net-0.31')
     print('nettt loaded')
 
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0.001)
 mseloss = nn.MSELoss(reduction='mean')
 # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
-lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (0))
+lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (-2))
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
 # training
 if training:
 
-    EPOCH = 1000
+    EPOCH = 400
     break_flag = False
     prevvalloss, prevtrainloss = 10e30, 10e30
     ppp = 0
@@ -175,7 +175,7 @@ if training:
             bboxes_out = net(x)
             del x
 
-            print(bboxes_out.size(),bboxes.size())
+            # print(bboxes_out.size(),bboxes.size())
             loss = mseloss(bboxes_out, bboxes)
             # epochTloss += loss.item()
             epochTloss = loss.item()
@@ -192,7 +192,7 @@ if training:
               "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min with lr=%e"
               % lr)
 
-        if (epoch + 1) % 25 == 0:
+        if (epoch + 1) % 10 == 0:
 
             net.eval()
             epochvalloss = 0
