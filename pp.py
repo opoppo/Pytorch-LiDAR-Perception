@@ -5,6 +5,7 @@ import torch
 import cv2
 import math
 from bBox_2D import bBox_2D
+import json
 
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
@@ -12,7 +13,7 @@ anndata = np.load('./testset/anndata.npy')
 img = []
 
 # ==============================
-resolution = 224  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
+resolution = 299  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ==============================
 
 for i, scan in enumerate(cloudata):
@@ -83,5 +84,48 @@ del augmentann
 img = img + img
 
 print(cloudata.shape, '\t', anndata.shape, '\t', len(img))
-np.save('./testset/img', img)
-np.save('./testset/anndatafixed', anndata)
+
+ann_json = {}
+images = []
+annotations = []
+categories = []
+iminfo = {}
+anninfo = {}
+catinfo = {}
+
+for i, im in enumerate(img):
+    cv2.imwrite('./testset/dataset/im/im%d.jpg' % i, im)
+    iminfo = {
+        "file_name": "00000%d.jpg" % i,
+        "height": im.shape[0],
+        "width": im.shape[1],
+        "id": i
+    }
+    images.append(iminfo)
+
+idcount = 0
+for j, ann in enumerate(anndata):
+    np.save('./testset/dataset/ann/ann%d' % j, ann)
+    for i, label in enumerate(ann):
+        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+        anninfo = {
+            'segmentation': [],
+            'area': box.length * box.width,
+            'image_id': j,
+            'bbox': [label[2], label[3], label[1], label[0]],
+            'rotation': label[4],
+            'category_id': 1,
+            'id': idcount,
+        }
+        annotations.append(anninfo)
+        idcount += 1
+
+catinfo = {
+    "supercategory": "none",
+    "id": 1,
+    "name": "car"}
+categories.append(catinfo)
+
+ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
+with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:
+    json.dump(ann_json, json_file, ensure_ascii=False)

@@ -8,6 +8,10 @@ import torch.nn as nn
 import time
 import pretrainedmodels
 from bBox_2D import bBox_2D
+import torch.multiprocessing as mp
+import maskrcnn_benchmark
+
+mp = mp.get_context('spawn')
 
 
 class Reshape(nn.Module):
@@ -24,7 +28,9 @@ class OutputLayer(nn.Module):
         super(OutputLayer, self).__init__()
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
-            nn.Linear(2048, 15, bias=True),
+            nn.Linear(2048, 225, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(225, 15, bias=True),
             Reshape(-1, 3, 5)
         )
 
@@ -39,7 +45,9 @@ class OutputLayerInceptionv4(nn.Module):
         super(OutputLayerInceptionv4, self).__init__()
         # self.fc = nn.Linear(2048, (5,5), bias=True)
         self.fc = nn.Sequential(
-            nn.Linear(1536, 15, bias=True),
+            nn.Linear(1536, 225, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(225, 15, bias=True),
             Reshape(-1, 3, 5)
         )
 
@@ -64,7 +72,7 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 # ====================================================================================================
 training = 1  # ????========================================================================================
-resume = 1  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
+resume = 0  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
 generateNewSets = 0  # REGENERATE the datasets !!!!!!!!!!!!!!!
 # ====================================================================================================
 
@@ -74,10 +82,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 if training and not resume:
     # net = torchvision.models.resnet101(pretrained=True)   #256  10s
     # net.fc = OutputLayer()
-    net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')  # 136  20s
-    net.last_linear = OutputLayer()
-    # net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
-    # net.last_linear = OutputLayerInceptionv4()
+    # net = pretrainedmodels.__dict__['se_resnext101_32x4d'](num_classes=1000, pretrained='imagenet')  # 136  20s
+    # net.last_linear = OutputLayer()
+    net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
+    net.last_linear = OutputLayerInceptionv4()
     net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1, 2, 3])
 
 if generateNewSets:
@@ -107,11 +115,11 @@ print("datasets ", len(trainset), len(valset), len(testset))
 
 train_loader = data.DataLoader(
     dataset=trainset,
-    batch_size=136,  # 256 for 4 GPUs
+    batch_size=186,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    # num_workers=12,
+    num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(0, 3000, 1)))
 )
 val_loader = data.DataLoader(
@@ -120,7 +128,7 @@ val_loader = data.DataLoader(
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    # num_workers=12
+    num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(3000, 3500, 1)))
 )
 test_loader = data.DataLoader(
@@ -129,7 +137,7 @@ test_loader = data.DataLoader(
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    # num_workers=12
+    num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(3500, 4239, 1)))
 )
 
@@ -145,23 +153,23 @@ if resume and (not training):
 optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0.001)
 mseloss = nn.MSELoss(reduction='mean')
 # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
-lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (-2))
+lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (0))
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
 # training
 if training:
 
-    EPOCH = 400
+    EPOCH = 500
     break_flag = False
     prevvalloss, prevtrainloss = 10e30, 10e30
     ppp = 0
     waitfor = 5  # rounds to wait for further improvement before quit training=================================
 
     totaltime, losslist = [], []
+    net.train()
 
     for epoch in range(EPOCH):
 
-        net.train()
         scheduler.step()
         time_start = time.time()
         epochTloss = 0
@@ -186,7 +194,7 @@ if training:
 
         time_end = time.time()
         totaltime.append(time_end - time_start)
-        losslist.append((epoch, epochTloss))
+        # losslist.append((epoch, epochTloss))
         lr = get_lr(optimizer)
         print("EPOCH", epoch, "  loss_total: %.4f" % epochTloss, "  epoch_time: %.2f" % (time_end - time_start),
               "s   estimated_time: %.2f" % ((EPOCH - epoch - 1) * sum(totaltime) / ((epoch + 1) * 60)), "min with lr=%e"
