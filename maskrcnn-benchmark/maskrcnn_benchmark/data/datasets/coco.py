@@ -51,6 +51,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         masks = SegmentationMask(masks, img.size)
         target.add_field("masks", masks)
 
+#====================================
         rotations=[obj['rotation'] for obj in anno]
         rotations=torch.Tensor(rotations)
         target.add_field("rotations",rotations)

@@ -6,6 +6,7 @@ import cv2
 import math
 from bBox_2D import bBox_2D
 import json
+import random
 
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
@@ -16,6 +17,7 @@ img = []
 resolution = 299  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ==============================
 
+# Cloud data to images
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
     for dot in scan:
@@ -47,7 +49,6 @@ for i, scan in enumerate(cloudata):
     print(i)
     # cv2.waitKey()
 # cv2.destroyAllWindows()
-# TODO: data augmentation, noise
 
 
 # Flipping
@@ -67,7 +68,7 @@ for i, scan in enumerate(anndata):
 anndata = np.concatenate((anndata, augmentann))
 del augmentann
 
-# noise to rotate, translate(x,y), resize
+# Adding noise : rotate, translate(x,y), resize
 print('Adding Noise...')
 augmentann = np.zeros(anndata.shape, dtype=np.float)
 for i, scan in enumerate(anndata):
@@ -82,9 +83,11 @@ for i, scan in enumerate(anndata):
 anndata = np.concatenate((anndata, augmentann))
 del augmentann
 img = img + img
+ll = len(img)
 
-print(cloudata.shape, '\t', anndata.shape, '\t', len(img))
+print(cloudata.shape, '\t', anndata.shape, '\t', ll)
 
+# to COCO json dataset and shuffle and split
 ann_json = {}
 images = []
 annotations = []
@@ -92,11 +95,13 @@ categories = []
 iminfo = {}
 anninfo = {}
 catinfo = {}
+trainsplit, valsplit, testsplit = int(ll * 0.70), int(ll * (0.70 + 0.15)), ll
+print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
 
 for i, im in enumerate(img):
-    cv2.imwrite('./testset/dataset/im/im%d.jpg' % i, im)
+    cv2.imwrite('./maskrcnn-benchmark/datasets/coco/val2014/im%d.jpg' % i, im)
     iminfo = {
-        "file_name": "00000%d.jpg" % i,
+        "file_name": "im%d.jpg" % i,
         "height": im.shape[0],
         "width": im.shape[1],
         "id": i
@@ -105,7 +110,7 @@ for i, im in enumerate(img):
 
 idcount = 0
 for j, ann in enumerate(anndata):
-    np.save('./testset/dataset/ann/ann%d' % j, ann)
+    # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         anninfo = {
@@ -126,6 +131,25 @@ catinfo = {
     "name": "car"}
 categories.append(catinfo)
 
-ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
-with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:
-    json.dump(ann_json, json_file, ensure_ascii=False)
+data = list(zip(images, annotations))  # zip
+random.shuffle(data)  # shuffle
+images, annotations = list(zip(*data))  # unzip
+
+# ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
+# with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:
+#     json.dump(ann_json, json_file, ensure_ascii=False)
+
+trainann_json = {'info': {}, 'images': images[:trainsplit], 'annotations': annotations[:trainsplit],
+                 'categories': categories}
+with open("./maskrcnn-benchmark/datasets/coco/annotations/trainann.json", 'w', encoding='utf-8') as json_file:
+    json.dump(trainann_json, json_file, ensure_ascii=False)
+
+valann_json = {'info': {}, 'images': images[trainsplit:valsplit], 'annotations': annotations[trainsplit:valsplit],
+               'categories': categories}
+with open("./maskrcnn-benchmark/datasets/coco/annotations/valann.json", 'w', encoding='utf-8') as json_file:
+    json.dump(valann_json, json_file, ensure_ascii=False)
+
+testann_json = {'info': {}, 'images': images[valsplit:], 'annotations': annotations[valsplit:],
+                'categories': categories}
+with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
+    json.dump(testann_json, json_file, ensure_ascii=False)
