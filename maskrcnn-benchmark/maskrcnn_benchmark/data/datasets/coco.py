@@ -8,7 +8,7 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 
 class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
-        self, ann_file, root, remove_images_without_annotations, transforms=None
+            self, ann_file, root, remove_images_without_annotations, transforms=None
     ):
         super(COCODataset, self).__init__(root, ann_file)
         # sort indices for reproducible results
@@ -34,9 +34,11 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
+        print(anno,'=============================================')
+
         # filter crowd annotations
         # TODO might be better to add an extra field
-        anno = [obj for obj in anno if obj["iscrowd"] == 0]
+        anno = [obj for obj in anno]  # if obj["iscrowd"] == 0]
 
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
@@ -51,15 +53,17 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         masks = SegmentationMask(masks, img.size)
         target.add_field("masks", masks)
 
-#====================================
-        rotations=[obj['rotation'] for obj in anno]
-        rotations=torch.Tensor(rotations)
-        target.add_field("rotations",rotations)
+        # ====================================
+        rotations = [obj["rotation"] for obj in anno]
+        rotations = torch.Tensor(rotations)
+        target.add_field("rotations", rotations)
 
         target = target.clip_to_image(remove_empty=True)
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
+
+        # print(target.,'===================================')
 
         return img, target, idx
 

@@ -34,6 +34,7 @@ class FastRCNNLossComputation(object):
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # Fast RCNN only need "labels" field for selecting the targets
         target = target.copy_with_fields("labels")
+        target = target.copy_with_fields("rotations")
         # get the targets corresponding GT for each proposal
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes
@@ -45,7 +46,7 @@ class FastRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
-        orien_targets=[]
+        orien_targets = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -69,14 +70,14 @@ class FastRCNNLossComputation(object):
             )
 
             # compute orientation targets=======================================
-            orien_targets_per_image =  matched_targets.get_field("rotations")
+            orien_targets_per_image = matched_targets.get_field("rotations")
             orien_targets_per_image = orien_targets_per_image.to(dtype=torch.int64)
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
             orien_targets.append(orien_targets_per_image)
 
-        return labels, regression_targets,orien_targets
+        return labels, regression_targets, orien_targets
 
     def subsample(self, proposals, targets):
         """
@@ -88,26 +89,26 @@ class FastRCNNLossComputation(object):
             proposals (list[BoxList])
             targets (list[BoxList])
         """
-#=====================================================================
-        labels, regression_targets,orien_targets = self.prepare_targets(proposals, targets)
+        # =====================================================================
+        labels, regression_targets, orien_targets = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes============
-        for labels_per_image, regression_targets_per_image,orien_targets_per_image, proposals_per_image in zip(
-            labels, regression_targets,orien_targets, proposals
+        for labels_per_image, regression_targets_per_image, orien_targets_per_image, proposals_per_image in zip(
+                labels, regression_targets, orien_targets, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
-#===================================================================
-            proposals_per_image.add_field("orientation_targets",orien_targets_per_image)
+            # ===================================================================
+            proposals_per_image.add_field("orientation_targets", orien_targets_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
         for img_idx, (pos_inds_img, neg_inds_img) in enumerate(
-            zip(sampled_pos_inds, sampled_neg_inds)
+                zip(sampled_pos_inds, sampled_neg_inds)
         ):
             img_sampled_inds = torch.nonzero(pos_inds_img | neg_inds_img).squeeze(1)
             proposals_per_image = proposals[img_idx][img_sampled_inds]
@@ -132,7 +133,7 @@ class FastRCNNLossComputation(object):
 
         class_logits = cat(class_logits, dim=0)
         box_regression = cat(box_regression, dim=0)
-        orien_regression=cat(box_orien,dim=0)
+        orien_regression = cat(box_orien, dim=0)
         device = class_logits.device
 
         if not hasattr(self, "_proposals"):
@@ -144,8 +145,8 @@ class FastRCNNLossComputation(object):
         regression_targets = cat(
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
-#=========================================================
-        orien_targets=cat(
+        # =========================================================
+        orien_targets = cat(
             [proposal.get_field("orientation_targets") for proposal in proposals], dim=0
         )
 
@@ -164,8 +165,8 @@ class FastRCNNLossComputation(object):
             size_average=False,
             beta=1,
         )
-#===========================================================
-        orien_loss=smooth_l1_loss(
+        # ===========================================================
+        orien_loss = smooth_l1_loss(
             box_orien[sampled_pos_inds_subset[:, None], map_inds],
             orien_targets[sampled_pos_inds_subset],
             size_average=False,
@@ -173,7 +174,7 @@ class FastRCNNLossComputation(object):
         )
 
         box_loss = box_loss / labels.numel()
-        orien_loss=orien_loss/labels.numel()
+        orien_loss = orien_loss / labels.numel()
 
         return classification_loss, box_loss, orien_loss
 

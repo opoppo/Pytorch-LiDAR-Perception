@@ -1,4 +1,4 @@
-# import os
+import os
 # import pcl
 import numpy as np
 import torch
@@ -7,6 +7,7 @@ import math
 from bBox_2D import bBox_2D
 import json
 import random
+from shutil import copyfile
 
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
@@ -97,6 +98,7 @@ anninfo = {}
 catinfo = {}
 trainsplit, valsplit, testsplit = int(ll * 0.70), int(ll * (0.70 + 0.15)), ll
 print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
+mwidth, mlength, mrotation,marea = 0, 0, 0,0
 
 for i, im in enumerate(img):
     cv2.imwrite('./maskrcnn-benchmark/datasets/coco/val2014/im%d.jpg' % i, im)
@@ -124,6 +126,10 @@ for j, ann in enumerate(anndata):
         }
         annotations.append(anninfo)
         idcount += 1
+        mwidth+=box.width
+        mlength+=box.length
+        marea+=box.length * box.width
+        mrotation+=box.alpha
 
 catinfo = {
     "supercategory": "none",
@@ -132,7 +138,7 @@ catinfo = {
 categories.append(catinfo)
 
 data = list(zip(images, annotations))  # zip
-random.shuffle(data)  # shuffle
+random.shuffle(data)  # shuffle json labels
 images, annotations = list(zip(*data))  # unzip
 
 # ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
@@ -153,3 +159,9 @@ testann_json = {'info': {}, 'images': images[valsplit:], 'annotations': annotati
                 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
     json.dump(testann_json, json_file, ensure_ascii=False)
+
+# print(mwidth/idcount,mlength/idcount,marea/idcount,mrotation/idcount)
+# 12.588   5.719   131.970   0.0
+
+for im in trainann_json['images']:
+    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/'+im["file_name"] ,'./maskrcnn-benchmark/datasets/coco/train2014/'+im["file_name"])
