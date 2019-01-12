@@ -34,11 +34,11 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
-        print(anno,'=============================================')
+        # print(len(anno),'=================anno=================  ')
 
         # filter crowd annotations
         # TODO might be better to add an extra field
-        anno = [obj for obj in anno]  # if obj["iscrowd"] == 0]
+        anno = [obj for obj in anno]  # if obj["iscrowd"] == 0] ===============================================
 
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
@@ -55,15 +55,16 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # ====================================
         rotations = [obj["rotation"] for obj in anno]
-        rotations = torch.Tensor(rotations)
+        rotations = torch.tensor(rotations)
         target.add_field("rotations", rotations)
 
-        target = target.clip_to_image(remove_empty=True)
 
+        target = target.clip_to_image(remove_empty=False)
+        # print(len(target), '==================targetanno=================')
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
-        # print(target.,'===================================')
+        # print(len(target),'==================target=================')
 
         return img, target, idx
 

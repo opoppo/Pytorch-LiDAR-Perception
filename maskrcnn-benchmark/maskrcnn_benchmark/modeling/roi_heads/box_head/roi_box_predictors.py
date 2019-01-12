@@ -15,8 +15,6 @@ class FastRCNNPredictor(nn.Module):
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=7)
         self.cls_score = nn.Linear(num_inputs, num_classes)
         self.bbox_pred = nn.Linear(num_inputs, num_classes * 4)
-#=================================================
-        self.bbox_orien=nn.Linear(num_inputs,num_classes)
 
         nn.init.normal_(self.cls_score.weight, mean=0, std=0.01)
         nn.init.constant_(self.cls_score.bias, 0)
@@ -29,9 +27,9 @@ class FastRCNNPredictor(nn.Module):
         x = x.view(x.size(0), -1)
         cls_logit = self.cls_score(x)
         bbox_pred = self.bbox_pred(x)
-#====================================
-        bbox_orien= self.bbox_orien(x)
-        return cls_logit, bbox_pred, bbox_orien
+
+        # print(cls_logit,'=========',bbox_pred,'=========',bbox_orien)
+        return cls_logit, bbox_pred
 
 
 class FPNPredictor(nn.Module):
@@ -42,6 +40,9 @@ class FPNPredictor(nn.Module):
 
         self.cls_score = nn.Linear(representation_size, num_classes)
         self.bbox_pred = nn.Linear(representation_size, num_classes * 4)
+        # =================================================
+        self.bbox_orien = nn.Linear(representation_size, 1)
+        # print(representation_size,num_classes,'===================================================================')
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
@@ -51,8 +52,11 @@ class FPNPredictor(nn.Module):
     def forward(self, x):
         scores = self.cls_score(x)
         bbox_deltas = self.bbox_pred(x)
-
-        return scores, bbox_deltas
+        # print(scores, '=========', bbox_deltas, '=========')
+        # ====================================
+        bbox_orien = self.bbox_orien(x)
+        # print(bbox_orien.size(),'====',scores.size(),bbox_deltas.size(),'==============')
+        return scores, bbox_deltas, bbox_orien
 
 
 _ROI_BOX_PREDICTOR = {
