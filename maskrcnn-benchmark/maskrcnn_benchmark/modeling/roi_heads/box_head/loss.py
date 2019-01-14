@@ -176,12 +176,12 @@ class FastRCNNLossComputation(object):
         # print(orien_regression.size(),'\n',orien_targets.size(),'\n=================================')
 
         # print(sampled_pos_inds_subset,'\n',map_inds)
-        orien_loss = smooth_l1_loss(
+        orien_loss = torch.sqrt(F.mse_loss(
             orien_regression[sampled_pos_inds_subset],
             orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
-            size_average=False,
-            beta=1,
-        )
+            # size_average=False,
+            # beta=1,
+        ))
 
         box_loss = box_loss / labels.numel()
         orien_loss = orien_loss / labels.numel()

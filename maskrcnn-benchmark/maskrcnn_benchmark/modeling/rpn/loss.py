@@ -150,14 +150,14 @@ class RPNLossComputation(object):
             objectness[sampled_inds], labels[sampled_inds]
         )
 
-        orien_loss = smooth_l1_loss(
+        orien_loss =  torch.sqrt(F.mse_loss(
             orien_regression[sampled_pos_inds],
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
-            size_average=False,
-            beta=1,
-        ) / (sampled_inds.numel())
+            # size_average=False,
+            # beta=1,
+        ) )/ (sampled_inds.numel())
 
-        print(orien_loss)
+        # print(orien_loss)
 
         return objectness_loss, box_loss, orien_loss
 
