@@ -15,7 +15,7 @@ anndata = np.load('./testset/anndata.npy')
 img = []
 
 # ==============================
-resolution = 299  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
+resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ==============================
 
 # Cloud data to images
@@ -26,31 +26,33 @@ for i, scan in enumerate(cloudata):
             emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)] = (
                 int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
                 int(dot[1] * 75 / 15 + 80))
+    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+
     for j, label in enumerate(anndata[i]):
         if label[0] < label[1] and (label[4] == -90 or label[4] == 0 or label[4] == 90 or label[4] == -180):
             box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # fix annotations!!!
         else:
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
 
+        # print(box.xc,box.yc)
         box.scale(300 / 50, 100, 20)
-        box.scale(resolution / 200, 0, 0)  # ===== !!!
-        # box.Scale(299 / 200, 0, 0)  # ===== !!!
-        box.bBoxCalcVertxex()
+        box.scale(resolution / 200, 0, 0)
+
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
-        # cv2.line(emptyImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(emptyImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(emptyImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(emptyImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-
-    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
-
+        # box.bBoxCalcVertxex()
+        # cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
+        # print(box.vertex1,box.vertex2,box.vertex3,box.vertex4)
     # cv2.imshow('scan', outImage)
     img.append(outImage)
     print(i)
-    # cv2.waitKey()
-# cv2.destroyAllWindows()
-
+    # k=cv2.waitKey()
+    # if k == 27:  # Esc for exiting
+    #     cv2.destroyAllWindows()
+    #     os._exit(1)
 
 # Flipping
 augmentimg = []
@@ -84,6 +86,7 @@ for i, scan in enumerate(anndata):
 anndata = np.concatenate((anndata, augmentann))
 del augmentann
 img = img + img
+
 ll = len(img)
 
 print(cloudata.shape, '\t', anndata.shape, '\t', ll)
@@ -97,8 +100,9 @@ iminfo = {}
 anninfo = {}
 catinfo = {}
 trainsplit, valsplit, testsplit = int(ll * 0.70), int(ll * (0.70 + 0.15)), ll
+overfittest = 100
 print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
-mwidth, mlength, mrotation,marea = 0, 0, 0,0
+mwidth, mlength, mrotation, marea = 0, 0, 0, 0
 
 for i, im in enumerate(img):
     cv2.imwrite('./maskrcnn-benchmark/datasets/coco/val2014/im%d.jpg' % i, im)
@@ -123,13 +127,14 @@ for j, ann in enumerate(anndata):
             'rotation': label[4],
             'category_id': 1,
             'id': idcount,
+            'iscrowd': 0
         }
         annotations.append(anninfo)
         idcount += 1
-        mwidth+=box.width
-        mlength+=box.length
-        marea+=box.length * box.width
-        mrotation+=box.alpha
+        mwidth += box.width
+        mlength += box.length
+        marea += box.length * box.width
+        mrotation += box.alpha
 
 catinfo = {
     "supercategory": "none",
@@ -160,8 +165,18 @@ testann_json = {'info': {}, 'images': images[valsplit:], 'annotations': annotati
 with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
     json.dump(testann_json, json_file, ensure_ascii=False)
 
-# print(mwidth/idcount,mlength/idcount,marea/idcount,mrotation/idcount)
+overfitann_json = {'info': {}, 'images': images[:overfittest], 'annotations': annotations[:overfittest],
+                   'categories': categories}
+with open("./maskrcnn-benchmark/datasets/coco/annotations/overfit.json", 'w', encoding='utf-8') as json_file:
+    json.dump(overfitann_json, json_file, ensure_ascii=False)
+
+print(mwidth / idcount, mlength / idcount, marea / idcount, mrotation / idcount)
 # 12.588   5.719   131.970   0.0
 
 for im in trainann_json['images']:
-    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/'+im["file_name"] ,'./maskrcnn-benchmark/datasets/coco/train2014/'+im["file_name"])
+    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"],
+             './maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"])
+
+for im in overfitann_json['images']:
+    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"],
+             './maskrcnn-benchmark/datasets/coco/overfit2014/' + im["file_name"])

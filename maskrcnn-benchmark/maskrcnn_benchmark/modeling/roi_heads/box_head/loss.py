@@ -117,6 +117,7 @@ class FastRCNNLossComputation(object):
             proposals[img_idx] = proposals_per_image
 
         self._proposals = proposals
+        # print(proposals_per_image.get_field("orientation_targets"),"===========================================")
         return proposals
 
     def __call__(self, class_logits, box_regression, box_orien):

@@ -32,8 +32,8 @@ class bBox_2D(object):
         self.vertex4 = (int(self.vertex4[0]), int(self.vertex4[1]))
 
     def scale(self, ratio, offsx, offsy):
-        self.yc = self.yc * ratio + offsy
-        self.xc = self.xc * ratio + offsx
+        self.yc = (self.yc)* ratio + offsy
+        self.xc = (self.xc) * ratio + offsx
         self.center = (self.xc, self.yc)
         self.width = self.width * ratio
         self.length = self.length * ratio
