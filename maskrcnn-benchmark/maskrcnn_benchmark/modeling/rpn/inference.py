@@ -57,7 +57,7 @@ class RPNPostProcessor(torch.nn.Module):
         # Get the device we're operating on
         device = proposals[0].bbox.device
 
-        gt_boxes = [target.copy_with_fields(["orientation_targets"]) for target in targets]
+        gt_boxes = [target.copy_with_fields(["rotations"]) for target in targets]
 
         # later cat of bbox requires all fields to be present for all bbox
         # so we need to add a dummy for objectness that's missing

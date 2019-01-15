@@ -35,13 +35,13 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = 800  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = 999  # (800,)
 # Maximum size of the side of the image during training
-_C.INPUT.MAX_SIZE_TRAIN = 1333
+_C.INPUT.MAX_SIZE_TRAIN = 999
 # Size of the smallest side of the image during testing
-_C.INPUT.MIN_SIZE_TEST = 800
+_C.INPUT.MIN_SIZE_TEST = 999
 # Maximum size of the side of the image during testing
-_C.INPUT.MAX_SIZE_TEST = 1333
+_C.INPUT.MAX_SIZE_TEST = 999
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
@@ -106,15 +106,15 @@ _C.MODEL.RPN.STRADDLE_THRESH = 0
 # Minimum overlap required between an anchor and ground-truth box for the
 # (anchor, gt box) pair to be a positive example (IoU >= FG_IOU_THRESHOLD
 # ==> positive RPN example)
-_C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
+_C.MODEL.RPN.FG_IOU_THRESHOLD = 0.3
 # Maximum overlap allowed between an anchor and ground-truth box for the
 # (anchor, gt box) pair to be a negative examples (IoU < BG_IOU_THRESHOLD
 # ==> negative RPN example)
-_C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
+_C.MODEL.RPN.BG_IOU_THRESHOLD = 0.1
 # Total number of RPN examples per image
 _C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
 # Target fraction of foreground (positive) examples per RPN minibatch
-_C.MODEL.RPN.POSITIVE_FRACTION = 0.5
+_C.MODEL.RPN.POSITIVE_FRACTION = 0.75
 # Number of top scoring RPN proposals to keep before applying NMS
 # When FPN is used, this is *per FPN level* (not total)
 _C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 12000
@@ -140,10 +140,10 @@ _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 _C.MODEL.ROI_HEADS = CN()
 _C.MODEL.ROI_HEADS.USE_FPN = False
 # Overlap threshold for an RoI to be considered foreground (if >= FG_IOU_THRESHOLD)
-_C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
+_C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.3
 # Overlap threshold for an RoI to be considered background
 # (class = 0 if overlap in [0, BG_IOU_THRESHOLD))
-_C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
+_C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.1
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
 _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
@@ -153,7 +153,7 @@ _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # E.g., a common configuration is: 512 * 2 * 8 = 8192
 _C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
-_C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
+_C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.5
 
 # Only used on test mode
 

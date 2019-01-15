@@ -105,7 +105,7 @@ class FastRCNNLossComputation(object):
                 "regression_targets", regression_targets_per_image
             )
             # ===================================================================
-            proposals_per_image.add_field("orientation_targets", orien_targets_per_image)
+            proposals_per_image.add_field("rotations", orien_targets_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
@@ -152,7 +152,7 @@ class FastRCNNLossComputation(object):
 
         # =========================================================
         orien_targets = cat(
-            [proposal.get_field("orientation_targets") for proposal in proposals], dim=0
+            [proposal.get_field("rotations") for proposal in proposals], dim=0
         )
 
         classification_loss = F.cross_entropy(class_logits, labels)

@@ -21,7 +21,7 @@ def compute_on_dataset(model, data_loader, device):
     cpu_device = torch.device("cpu")
     for i, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
-        # print(images.tensors.size(),targets,'============================')
+        # print(targets,'============================')
         images = images.to(device)
         with torch.no_grad():
             output = model(images)
@@ -31,15 +31,16 @@ def compute_on_dataset(model, data_loader, device):
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
         # print(images.tensors.size(),'=====================================')
-        x = images.tensors.permute(0,3, 2, 1)
+        x = images.tensors.permute(0,2, 3, 1)
         images = x.cpu().detach().numpy().copy()
         # print(emptyImage.shape,type(emptyImage))
         # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
 
         del x
         for j,(im,tar,out) in enumerate( zip(images,targets,output)):
-            # overlay_boxes(im,out,'output')
+            overlay_boxes(im,out,'output')
             overlay_boxes(im,tar,'targets')
+            # print(out.shape)
 
             # cv2.imshow('scan', im)
             # print(im.shape,'======')
@@ -140,6 +141,8 @@ def overlay_boxes(image, predictions,anntype):
     oriens = predictions.get_field("rotations")
     boxes = predictions.bbox
 
+    # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
+
     for box, orien in zip(boxes, oriens):
         box = box.to(torch.int64).squeeze_().detach().cpu().numpy()
         orien = orien.to(torch.int64).squeeze_().detach().cpu().numpy()
@@ -153,10 +156,10 @@ def overlay_boxes(image, predictions,anntype):
         box = bBox_2D(l, w, xc, yc, orien)
         box.bBoxCalcVertxex()
         color={'targets':(155,255,255),'output':(155,255,55)}
-        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 1, cv2.LINE_AA)
+        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
 
     return image
 

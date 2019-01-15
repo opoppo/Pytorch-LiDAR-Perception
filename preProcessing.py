@@ -142,9 +142,9 @@ catinfo = {
     "name": "car"}
 categories.append(catinfo)
 
-data = list(zip(images, annotations))  # zip
-random.shuffle(data)  # shuffle json labels
-images, annotations = list(zip(*data))  # unzip
+# data = list(zip(images, annotations))  # zip
+# # random.shuffle(data)  # shuffle json labels
+# images, annotations = list(zip(*data))  # unzip   ----> CAUSE TRUNCATED DATA!!!!
 
 # ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
 # with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:

@@ -119,7 +119,7 @@ class RPNModule(torch.nn.Module):
             # sampled into a training batch.
             with torch.no_grad():
                 boxes = self.box_selector_train(
-                    anchors, objectness, rpn_box_regression, targets
+                    anchors, objectness, rpn_box_regression, rpn_box_orien,targets
                 )
         loss_objectness, loss_rpn_box_reg ,loss_rpn_box_orien= self.loss_evaluator(
             anchors, objectness, rpn_box_regression,rpn_box_orien, targets
