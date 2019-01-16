@@ -157,7 +157,7 @@ class RPNLossComputation(object):
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
             # size_average=False,
             # beta=1,
-        ) )/ (sampled_pos_inds.numel())
+        ) )/ (sampled_pos_inds.numel())/180
 
         # print(orien_loss)
 
