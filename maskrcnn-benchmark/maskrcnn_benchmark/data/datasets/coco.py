@@ -62,6 +62,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         rotations = torch.tensor(rotations)
         target.add_field("rotations", rotations)
 
+        # print(target.get_field('rotations'), '============================')
+
         # print(target,'============================================')
         target = target.clip_to_image(remove_empty=False)
         # print(len(target), '==================targetanno=================')
