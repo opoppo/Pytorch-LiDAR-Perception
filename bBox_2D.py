@@ -73,3 +73,9 @@ class bBox_2D(object):
         self.xc = 2 * axis - self.xc
         self.alpha = -self.alpha
         self.center = (self.xc, self.yc)
+
+    def xcyc2topleft(self):
+        self.xtl=self.xc-self.width/2
+        self.ytl=self.yc-self.length/2
+
+

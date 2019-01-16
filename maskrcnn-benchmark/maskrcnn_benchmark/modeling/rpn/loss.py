@@ -94,7 +94,7 @@ class RPNLossComputation(object):
             objectness_loss (Tensor)
             box_loss (Tensor
         """
-        # print(len(anchors[0]),len(targets[0]),'===================================')
+        # print(targets,'===================================')
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets, orien_targets = self.prepare_targets(anchors, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
@@ -145,11 +145,11 @@ class RPNLossComputation(object):
             beta=1.0 / 9,
             size_average=False,
         ) / (sampled_inds.numel())
-
+        # print(box_regression[sampled_pos_inds], '=============\n',regression_targets[sampled_pos_inds], '\n=========regression===========')
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]
         )
-
+        # print( orien_regression[sampled_pos_inds],orien_targets[sampled_pos_inds],'\n=========orien===========')
         orien_loss =  torch.sqrt(F.mse_loss(
             orien_regression[sampled_pos_inds],
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),

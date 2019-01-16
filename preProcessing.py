@@ -7,11 +7,10 @@ import math
 from bBox_2D import bBox_2D
 import json
 import random
-from shutil import copyfile
+import shutil
 
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
-# b = torch.FloatTensor(cloudata)
 img = []
 
 # ==============================
@@ -35,6 +34,9 @@ for i, scan in enumerate(cloudata):
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
 
         # print(box.xc,box.yc)
+        if box.xc==0 and box.yc ==0 and box.length==0 and box.width==0:   # delete empty labels with all 0
+            continue
+        # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(300 / 50, 100, 20)
         box.scale(resolution / 200, 0, 0)
 
@@ -45,14 +47,15 @@ for i, scan in enumerate(cloudata):
         # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-        # print(box.vertex1,box.vertex2,box.vertex3,box.vertex4)
+        # print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width)
     # cv2.imshow('scan', outImage)
-    img.append(outImage)
     print(i)
     # k=cv2.waitKey()
     # if k == 27:  # Esc for exiting
     #     cv2.destroyAllWindows()
     #     os._exit(1)
+
+    img.append(outImage)
 
 # Flipping
 augmentimg = []
@@ -104,8 +107,17 @@ overfittest = 100
 print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
 mwidth, mlength, mrotation, marea = 0, 0, 0, 0
 
+shutil.rmtree('./maskrcnn-benchmark/datasets/coco/val2014')
+os.mkdir('./maskrcnn-benchmark/datasets/coco/val2014')
+shutil.rmtree('./maskrcnn-benchmark/datasets/coco/train2014')
+os.mkdir('./maskrcnn-benchmark/datasets/coco/train2014')
+shutil.rmtree('./maskrcnn-benchmark/datasets/coco/test2014')
+os.mkdir('./maskrcnn-benchmark/datasets/coco/test2014')
+shutil.rmtree('./maskrcnn-benchmark/datasets/coco/overfit2014')
+os.mkdir('./maskrcnn-benchmark/datasets/coco/overfit2014')  # renew data space
+
 for i, im in enumerate(img):
-    cv2.imwrite('./maskrcnn-benchmark/datasets/coco/val2014/im%d.jpg' % i, im)
+    cv2.imwrite('./maskrcnn-benchmark/datasets/coco/train2014/im%d.jpg' % i, im)
     iminfo = {
         "file_name": "im%d.jpg" % i,
         "height": im.shape[0],
@@ -119,12 +131,13 @@ for j, ann in enumerate(anndata):
     # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+        box.xcyc2topleft()
         anninfo = {
             'segmentation': [],
             'area': box.length * box.width,
             'image_id': j,
-            'bbox': [label[2], label[3], label[1], label[0]],
-            'rotation': label[4],
+            'bbox': [box.xtl, box.ytl, box.width, box.length],
+            'rotation': box.alpha,
             'category_id': 1,
             'id': idcount,
             'iscrowd': 0
@@ -142,14 +155,6 @@ catinfo = {
     "name": "car"}
 categories.append(catinfo)
 
-# data = list(zip(images, annotations))  # zip
-# # random.shuffle(data)  # shuffle json labels
-# images, annotations = list(zip(*data))  # unzip   ----> CAUSE TRUNCATED DATA!!!!
-#
-# ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
-# with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:
-#     json.dump(ann_json, json_file, ensure_ascii=False)
-
 imagetrain = (images.copy())[:trainsplit]
 imids = set(im['id'] for im in imagetrain)
 annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
@@ -157,7 +162,7 @@ annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
 annids.remove(None)
 anntrain = []
 for ann in annotations:
-    if ann['image_id'] in imids:   # two different ids !!!!!!!
+    if ann['image_id'] in imids:  # two different ids !!!!!!!
         anntrain.append(ann)
 trainann_json = {'info': {}, 'images': imagetrain, 'annotations': anntrain, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/trainann.json", 'w', encoding='utf-8') as json_file:
@@ -170,7 +175,7 @@ annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
 annids.remove(None)
 annval = []
 for ann in annotations:
-    if ann['image_id'] in imids:   # two different ids !!!!!!!
+    if ann['image_id'] in imids:  # two different ids !!!!!!!
         annval.append(ann)
 valann_json = {'info': {}, 'images': imageval, 'annotations': annval, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/valann.json", 'w', encoding='utf-8') as json_file:
@@ -183,7 +188,7 @@ annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
 annids.remove(None)
 anntest = []
 for ann in annotations:
-    if ann['image_id'] in imids:   # two different ids !!!!!!!
+    if ann['image_id'] in imids:  # two different ids !!!!!!!
         anntest.append(ann)
 testann_json = {'info': {}, 'images': imagetest, 'annotations': anntest, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
@@ -196,7 +201,7 @@ annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
 annids.remove(None)
 annoverfit = []
 for ann in annotations:
-    if ann['image_id'] in imids:   # two different ids !!!!!!!
+    if ann['image_id'] in imids:  # two different ids !!!!!!!
         annoverfit.append(ann)
 overfitann_json = {'info': {}, 'images': imageoverfit, 'annotations': annoverfit, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/overfit.json", 'w', encoding='utf-8') as json_file:
@@ -205,10 +210,15 @@ with open("./maskrcnn-benchmark/datasets/coco/annotations/overfit.json", 'w', en
 print(mwidth / idcount, mlength / idcount, marea / idcount, mrotation / idcount)
 # # 12.588   5.719   131.970   0.0
 #
-for im in trainann_json['images']:
-    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"],
-             './maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"])
 
 for im in overfitann_json['images']:
-    copyfile('./maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"],
-             './maskrcnn-benchmark/datasets/coco/overfit2014/' + im["file_name"])
+    shutil.copyfile('./maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"],
+                    './maskrcnn-benchmark/datasets/coco/overfit2014/' + im["file_name"])
+
+for im in valann_json['images']:
+    shutil.move('./maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"],
+                './maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"])
+
+for im in testann_json['images']:
+    shutil.move('./maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"],
+                './maskrcnn-benchmark/datasets/coco/test2014/' + im["file_name"])

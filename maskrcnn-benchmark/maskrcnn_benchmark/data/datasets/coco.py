@@ -30,6 +30,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         }
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.transforms = transforms
+        # print(self.ids.__len__(),'====================================',ann_file)
 
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
@@ -42,7 +43,10 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
-        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")
+        print(boxes)
+        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")#=====================================
+
+        print(target.bbox,'============================')
 
         classes = [obj["category_id"] for obj in anno]
         classes = [self.json_category_id_to_contiguous_id[c] for c in classes]
@@ -59,12 +63,12 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         target.add_field("rotations", rotations)
 
         # print(target,'============================================')
-        target = target.clip_to_image(remove_empty=True)
+        target = target.clip_to_image(remove_empty=False)
         # print(len(target), '==================targetanno=================')
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
-        # print(len(target),'==================target=================')
+        # print(img.size(),'=================%d=================='%idx)
 
         return img, target, idx
 
