@@ -13,6 +13,7 @@ from ..utils.comm import scatter_gather
 from ..utils.comm import synchronize
 
 import cv2
+import shutil
 
 
 def compute_on_dataset(model, data_loader, device):
@@ -45,6 +46,8 @@ def compute_on_dataset(model, data_loader, device):
             # cv2.imshow('scan', im)
             # print(im.shape,'======')
             # torch.save(im,'%d'%i)
+            # shutil.rmtree('./result')
+            # os.mkdir('./result')
             cv2.imwrite('./result/%d.jpg' % i, im)
             # k=cv2.waitKey()
             # if k == 27:  # Esc for exiting

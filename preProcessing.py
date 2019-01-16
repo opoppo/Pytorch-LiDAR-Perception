@@ -34,7 +34,8 @@ for i, scan in enumerate(cloudata):
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
 
         # print(box.xc,box.yc)
-        if box.xc==0 and box.yc ==0 and box.length==0 and box.width==0:   # delete empty labels with all 0
+        if box.xc==0 and box.yc ==0 and box.length==0 and box.width==0:
+            anndata[i][j] = [0,0,0,0,0]  # mark with 0
             continue
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(300 / 50, 100, 20)
@@ -42,18 +43,18 @@ for i, scan in enumerate(cloudata):
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
-        # box.bBoxCalcVertxex()
-        # cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
-        # cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-        # print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width)
-    # cv2.imshow('scan', outImage)
+        box.bBoxCalcVertxex()
+        cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
+        print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width,' a ',box.alpha)
+    cv2.imshow('scan', outImage)
     print(i)
-    # k=cv2.waitKey()
-    # if k == 27:  # Esc for exiting
-    #     cv2.destroyAllWindows()
-    #     os._exit(1)
+    k=cv2.waitKey()
+    if k == 27:  # Esc for exiting
+        cv2.destroyAllWindows()
+        os._exit(1)
 
     img.append(outImage)
 
@@ -68,6 +69,8 @@ del augmentimg
 augmentann = np.zeros(anndata.shape, dtype=np.float)
 for i, scan in enumerate(anndata):
     for j, label in enumerate(scan):
+        if label[0]==0:
+            continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.flipx(axis=int(resolution / 2))
         augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
@@ -79,6 +82,8 @@ print('Adding Noise...')
 augmentann = np.zeros(anndata.shape, dtype=np.float)
 for i, scan in enumerate(anndata):
     for j, label in enumerate(scan):
+        if label[0]==0:
+            continue
         noiseratio = ((torch.randn(2)).div_(20)).exp_()
         noiseoffset = (torch.randn(2))
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
@@ -130,6 +135,8 @@ idcount = 0
 for j, ann in enumerate(anndata):
     # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
+        if label[0]==0:
+            continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.xcyc2topleft()
         anninfo = {
