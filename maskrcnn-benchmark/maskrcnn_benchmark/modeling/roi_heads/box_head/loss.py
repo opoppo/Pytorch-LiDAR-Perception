@@ -197,8 +197,8 @@ class FastRCNNLossComputation(object):
             # beta=1,
         ))
 
-        box_loss = box_loss / labels_pos.numel()
-        orien_loss = orien_loss / labels_pos.numel()/180
+        box_loss = box_loss / (labels_pos.numel()+1e-3)
+        orien_loss = orien_loss / (labels_pos.numel()+1e-3)/180
 
         return classification_loss, box_loss, orien_loss
 
