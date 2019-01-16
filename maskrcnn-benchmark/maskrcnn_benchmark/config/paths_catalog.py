@@ -7,7 +7,7 @@ import os
 class DatasetCatalog(object):
     DATA_DIR = "../datasets/"
     DATASETS = {
-        "coco_2014_overfittest": {
+        "coco_2014_overfit": {
             "img_dir": "coco/overfit2014",
             "ann_file": "coco/annotations/overfit.json"
         },

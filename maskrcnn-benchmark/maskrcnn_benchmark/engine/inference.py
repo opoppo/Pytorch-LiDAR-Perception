@@ -38,7 +38,7 @@ def compute_on_dataset(model, data_loader, device):
 
         del x
         for j,(im,tar,out) in enumerate( zip(images,targets,output)):
-            overlay_boxes(im,out,'output')
+            # overlay_boxes(im,out,'output')
             overlay_boxes(im,tar,'targets')
             # print(out.shape)
 

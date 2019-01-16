@@ -24,13 +24,13 @@ MODEL:
     NUM_GROUPS: 32
     WIDTH_PER_GROUP: 8
 DATASETS:
-  TRAIN: ("coco_2014_train", "coco_2014_valminusminival")
+  TRAIN: ("coco_2014_overfit", "coco_2014_valminusminival")
   TEST: ("coco_2014_minival",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
   BASE_LR: 0.001
-  WEIGHT_DECAY: 0.001
+  WEIGHT_DECAY: 0.000
   STEPS: (120000, 160000)
-  MAX_ITER: 20
+  MAX_ITER: 200
   IMS_PER_BATCH: 8

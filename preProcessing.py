@@ -145,34 +145,66 @@ categories.append(catinfo)
 # data = list(zip(images, annotations))  # zip
 # # random.shuffle(data)  # shuffle json labels
 # images, annotations = list(zip(*data))  # unzip   ----> CAUSE TRUNCATED DATA!!!!
-
+#
 # ann_json = {'info': {}, 'images': images, 'annotations': annotations, 'categories': categories}
 # with open("./testset/dataset/ann.json", 'w', encoding='utf-8') as json_file:
 #     json.dump(ann_json, json_file, ensure_ascii=False)
 
-trainann_json = {'info': {}, 'images': images[:trainsplit], 'annotations': annotations[:trainsplit],
-                 'categories': categories}
+imagetrain = (images.copy())[:trainsplit]
+imids = set(im['id'] for im in imagetrain)
+annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
+             annotations)  # get binary inds and ids of ann according to im
+annids.remove(None)
+anntrain = []
+for ann in annotations:
+    if ann['image_id'] in imids:   # two different ids !!!!!!!
+        anntrain.append(ann)
+trainann_json = {'info': {}, 'images': imagetrain, 'annotations': anntrain, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/trainann.json", 'w', encoding='utf-8') as json_file:
     json.dump(trainann_json, json_file, ensure_ascii=False)
 
-valann_json = {'info': {}, 'images': images[trainsplit:valsplit], 'annotations': annotations[trainsplit:valsplit],
-               'categories': categories}
+imageval = (images.copy())[trainsplit:valsplit]
+imids = set(im['id'] for im in imageval)
+annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
+             annotations)  # get binary inds and ids of ann according to im
+annids.remove(None)
+annval = []
+for ann in annotations:
+    if ann['image_id'] in imids:   # two different ids !!!!!!!
+        annval.append(ann)
+valann_json = {'info': {}, 'images': imageval, 'annotations': annval, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/valann.json", 'w', encoding='utf-8') as json_file:
     json.dump(valann_json, json_file, ensure_ascii=False)
 
-testann_json = {'info': {}, 'images': images[valsplit:], 'annotations': annotations[valsplit:],
-                'categories': categories}
+imagetest = (images.copy())[valsplit:]
+imids = set(im['id'] for im in imagetest)
+annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
+             annotations)  # get binary inds and ids of ann according to im
+annids.remove(None)
+anntest = []
+for ann in annotations:
+    if ann['image_id'] in imids:   # two different ids !!!!!!!
+        anntest.append(ann)
+testann_json = {'info': {}, 'images': imagetest, 'annotations': anntest, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
     json.dump(testann_json, json_file, ensure_ascii=False)
 
-overfitann_json = {'info': {}, 'images': images[:overfittest], 'annotations': annotations[:overfittest],
-                   'categories': categories}
+imageoverfit = (images.copy())[:overfittest]
+imids = set(im['id'] for im in imageoverfit)
+annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
+             annotations)  # get binary inds and ids of ann according to im
+annids.remove(None)
+annoverfit = []
+for ann in annotations:
+    if ann['image_id'] in imids:   # two different ids !!!!!!!
+        annoverfit.append(ann)
+overfitann_json = {'info': {}, 'images': imageoverfit, 'annotations': annoverfit, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/overfit.json", 'w', encoding='utf-8') as json_file:
     json.dump(overfitann_json, json_file, ensure_ascii=False)
-
+#
 print(mwidth / idcount, mlength / idcount, marea / idcount, mrotation / idcount)
-# 12.588   5.719   131.970   0.0
-
+# # 12.588   5.719   131.970   0.0
+#
 for im in trainann_json['images']:
     copyfile('./maskrcnn-benchmark/datasets/coco/val2014/' + im["file_name"],
              './maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"])

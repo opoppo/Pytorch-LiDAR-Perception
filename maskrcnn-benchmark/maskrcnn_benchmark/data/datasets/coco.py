@@ -58,8 +58,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         rotations = torch.tensor(rotations)
         target.add_field("rotations", rotations)
 
-
-        target = target.clip_to_image(remove_empty=False)
+        # print(target,'============================================')
+        target = target.clip_to_image(remove_empty=True)
         # print(len(target), '==================targetanno=================')
         if self.transforms is not None:
             img, target = self.transforms(img, target)
