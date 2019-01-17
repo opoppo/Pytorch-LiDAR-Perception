@@ -63,7 +63,7 @@ class RPNPostProcessor(torch.nn.Module):
         # so we need to add a dummy for objectness that's missing
         for gt_box in gt_boxes:
             gt_box.add_field("objectness", torch.ones(len(gt_box), device=device))
-
+        # print(proposals,gt_boxes,'======')
         proposals = [
             cat_boxlist((proposal, gt_box))
             for proposal, gt_box in zip(proposals, gt_boxes)
@@ -85,7 +85,8 @@ class RPNPostProcessor(torch.nn.Module):
         # put in the same format as anchors
         objectness = objectness.permute(0, 2, 3, 1).reshape(N, -1)
         objectness = objectness.sigmoid()
-        box_orien = box_orien.permute(0, 2, 3, 1).reshape(N, -1)
+        box_orien = box_orien.view(N, -1, 2, H, W).permute(0, 3, 4, 1, 2)
+        box_orien = box_orien.reshape(N, -1, 2)
         box_regression = box_regression.view(N, -1, 4, H, W).permute(0, 3, 4, 1, 2)
         box_regression = box_regression.reshape(N, -1, 4)
 

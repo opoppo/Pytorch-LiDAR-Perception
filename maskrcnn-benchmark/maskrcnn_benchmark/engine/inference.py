@@ -147,8 +147,9 @@ def overlay_boxes(image, predictions,anntype):
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
     for box, orien in zip(boxes, oriens):
-        box = box.to(torch.int64).squeeze_().detach().cpu().numpy()
-        orien = orien.to(torch.int64).squeeze_().detach().cpu().numpy()
+        box = box.squeeze_().detach().cpu().numpy()
+        alpha=torch.atan2(orien[:][0],orien[:][1])*180/3.1415926
+        alpha = alpha.squeeze_().detach().cpu().numpy()
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
         top_left, bottom_right = box[:2], box[2:]
         l = top_left[1] - bottom_right[1]
@@ -156,7 +157,7 @@ def overlay_boxes(image, predictions,anntype):
         xc = (top_left[0] + bottom_right[0]) / 2
         yc = (top_left[1] + bottom_right[1]) / 2
 
-        box = bBox_2D(l, w, xc, yc, orien)
+        box = bBox_2D(l, w, xc, yc, alpha)
         box.bBoxCalcVertxex()
         color={'targets':(155,255,255),'output':(155,255,55)}
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)

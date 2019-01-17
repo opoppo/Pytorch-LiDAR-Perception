@@ -94,7 +94,7 @@ _C.MODEL.RPN = CN()
 _C.MODEL.RPN.USE_FPN = True
 # Base RPN anchor sizes given in absolute pixels w.r.t. the scaled network input
 # _C.MODEL.RPN.ANCHOR_SIZES = (32, 64, 128, 256, 512)
-_C.MODEL.RPN.ANCHOR_SIZES = (7, 14, 28, 56, 112)
+_C.MODEL.RPN.ANCHOR_SIZES = (14, 28, 56, 112)
 # Stride of the feature map that RPN is attached.
 # For FPN, number of strides should match number of scales
 _C.MODEL.RPN.ANCHOR_STRIDE = (16,)
@@ -163,20 +163,20 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 _C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
-_C.MODEL.ROI_HEADS.NMS = 0.5
+_C.MODEL.ROI_HEADS.NMS = 0.2
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 100
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 3
 
 _C.MODEL.ROI_BOX_HEAD = CN()
 _C.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"
 _C.MODEL.ROI_BOX_HEAD.PREDICTOR = "FastRCNNPredictor"
-_C.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 14
+_C.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 28
 _C.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO = 0
 _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 2
 # Hidden layer dimension when using an MLP for the RoI box head
-_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
+_C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 2048
 
 _C.MODEL.ROI_MASK_HEAD = CN()
 _C.MODEL.ROI_MASK_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"

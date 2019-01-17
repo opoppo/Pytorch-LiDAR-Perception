@@ -74,7 +74,7 @@ class RPNLossComputation(object):
             )
             # compute orientation targets=======================================
             orien_targets_per_image = matched_targets.get_field("rotations")
-            orien_targets_per_image = orien_targets_per_image.to(dtype=torch.int64)
+            # orien_targets_per_image = orien_targets_per_image.to(dtype=torch.int64)
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
@@ -110,8 +110,8 @@ class RPNLossComputation(object):
         # same format as the labels. Note that the labels are computed for
         # all feature levels concatenated, so we keep the same representation
         # for the objectness and the box_regression
-        for objectness_per_level, box_regression_per_level,box_orien_per_level in zip(
-                objectness, box_regression,box_orien
+        for objectness_per_level, box_regression_per_level, box_orien_per_level in zip(
+                objectness, box_regression, box_orien
         ):
             N, A, H, W = objectness_per_level.shape
             # print(box_orien_per_level.shape)
@@ -122,7 +122,9 @@ class RPNLossComputation(object):
             box_regression_per_level = box_regression_per_level.view(N, -1, 4, H, W)
             box_regression_per_level = box_regression_per_level.permute(0, 3, 4, 1, 2)
             box_regression_per_level = box_regression_per_level.reshape(N, -1, 4)
-            box_orien_per_level = box_orien_per_level.permute(0, 2, 3, 1).reshape(N, -1)
+            box_orien_per_level = box_orien_per_level.view(N, -1, 2, H, W)
+            box_orien_per_level = box_orien_per_level.permute(0, 3, 4, 1, 2)
+            box_orien_per_level = box_orien_per_level.reshape(N, -1, 2)
             # print(box_regression_per_level.shape)
             # print(box_orien_per_level.shape,'========================')
             objectness_flattened.append(objectness_per_level)
@@ -133,7 +135,7 @@ class RPNLossComputation(object):
         # being concatenated as well)
         objectness = cat(objectness_flattened, dim=1).reshape(-1)
         box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 4)
-        orien_regression = cat(box_orien_flattened, dim=1).reshape(-1)
+        orien_regression = cat(box_orien_flattened, dim=1).reshape(-1, 2)
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
@@ -144,20 +146,20 @@ class RPNLossComputation(object):
             regression_targets[sampled_pos_inds],
             beta=1.0 / 9,
             size_average=False,
-        ) / (sampled_pos_inds.numel()+1e-3)
+        ) / (sampled_pos_inds.numel() + 0.1)
 
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]
         )
         # print(orien_targets[sampled_pos_inds],'=========orien===========')
-        # print(regression_targets[sampled_pos_inds], '=========regression===========\n')
+        # print(orien_regression[sampled_pos_inds].size(), '=========regression===========\n')
 
-        orien_loss =  torch.sqrt(F.mse_loss(
+        orien_loss = torch.sqrt(F.mse_loss(
             orien_regression[sampled_pos_inds],
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
             # size_average=False,
             # beta=1,
-        ) )/ (sampled_pos_inds.numel()+1e-3)/180
+        )) / (sampled_pos_inds.numel() + 0.1)
 
         # print(orien_loss)
 

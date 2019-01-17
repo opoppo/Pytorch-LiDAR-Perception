@@ -79,7 +79,7 @@ class FastRCNNLossComputation(object):
             # compute orientation targets=======================================
             orien_targets_per_image = matched_targets.get_field("rotations")
             # orien_targets_per_image = orien_targets_per_image[positive_inds]
-            orien_targets_per_image = orien_targets_per_image.to(dtype=torch.int64)
+
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
@@ -187,7 +187,7 @@ class FastRCNNLossComputation(object):
         # print(orien_regression.size(),'\n',orien_targets.size(),'\n=================================')
         # ===========================================================
         # print(labels_pos,'=================================')
-        # print(orien_regression.size(),'\n',orien_targets.size(),'\n=================================')
+        # print(orien_regression[sampled_pos_inds_subset],'\n',orien_targets[sampled_pos_inds_subset],'\n=================================')
 
         # print(sampled_pos_inds_subset,'\n',map_inds)
         orien_loss = torch.sqrt(F.mse_loss(
@@ -197,8 +197,8 @@ class FastRCNNLossComputation(object):
             # beta=1,
         ))
 
-        box_loss = box_loss / (labels_pos.numel()+1e-3)
-        orien_loss = orien_loss / (labels_pos.numel()+1e-3)/180
+        box_loss = box_loss / (labels_pos.numel()+0.1)
+        orien_loss = orien_loss / (labels_pos.numel()+0.1)
 
         return classification_loss, box_loss, orien_loss
 

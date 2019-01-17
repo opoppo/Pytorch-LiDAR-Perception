@@ -41,7 +41,7 @@ class FPNPredictor(nn.Module):
         self.cls_score = nn.Linear(representation_size, num_classes)
         self.bbox_pred = nn.Linear(representation_size, num_classes * 4)
         # =================================================
-        self.bbox_orien = nn.Linear(representation_size, 1)
+        self.bbox_orien = nn.Linear(representation_size,  2)
         # print(representation_size,num_classes,'===================================================================')
 
         nn.init.normal_(self.cls_score.weight, std=0.01)

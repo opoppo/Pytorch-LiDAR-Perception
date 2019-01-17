@@ -31,7 +31,7 @@ class RPNHead(nn.Module):
         self.bbox_pred = nn.Conv2d(
             in_channels, num_anchors * 4, kernel_size=1, stride=1
         )
-        self.bbox_orien = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
+        self.bbox_orien = nn.Conv2d(in_channels, num_anchors*2, kernel_size=1, stride=1)
 
         for l in [self.conv, self.cls_logits, self.bbox_pred, self.bbox_orien]:
             torch.nn.init.normal_(l.weight, std=0.01)
