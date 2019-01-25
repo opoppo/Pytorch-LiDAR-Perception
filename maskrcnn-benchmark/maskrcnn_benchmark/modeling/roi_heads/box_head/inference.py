@@ -104,7 +104,7 @@ class PostProcessor(nn.Module):
         # if we had multi-class NMS, we could perform this directly on the boxlist
         boxes = boxlist.bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
-        oriens=boxlist.get_field("rotations").reshape(-1,num_classes*2)
+        oriens=boxlist.get_field("rotations").reshape(-1,2)
 
         device = scores.device
         result = []

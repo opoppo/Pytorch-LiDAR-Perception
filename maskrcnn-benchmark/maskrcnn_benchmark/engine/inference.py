@@ -14,6 +14,7 @@ from ..utils.comm import synchronize
 
 import cv2
 import shutil
+from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 
 
 def compute_on_dataset(model, data_loader, device):
@@ -150,6 +151,7 @@ def overlay_boxes(image, predictions,anntype):
         box = box.squeeze_().detach().cpu().numpy()
         alpha=torch.atan2(orien[:][0],orien[:][1])*180/3.1415926
         alpha = alpha.squeeze_().detach().cpu().numpy()
+        # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
         top_left, bottom_right = box[:2], box[2:]
         l = top_left[1] - bottom_right[1]
@@ -167,79 +169,4 @@ def overlay_boxes(image, predictions,anntype):
 
     return image
 
-import math
-
-
-class bBox_2D(object):
-    def __init__(self, length, width, xc, yc,
-                 alpha):  # alpha is the bbox's orientation in degrees, theta is the relative angle to the sensor in rad
-        self.yc = yc
-        self.xc = xc
-        self.center = (self.xc, self.yc)
-        self.width = width
-        self.length = length
-        self.alpha = alpha
-        self.vertex1 = 0
-        self.vertex2 = 0
-        self.vertex3 = 0
-        self.vertex4 = 0
-
-    def bBoxCalcVertxex(self):
-        self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
-        self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
-        self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
-        self.vertex4 = (self.xc - self.length / 2, self.yc - self.width / 2)
-
-        self.vertex1 = self._rotate(self.vertex1, self.center, self.alpha)
-        self.vertex2 = self._rotate(self.vertex2, self.center, self.alpha)
-        self.vertex3 = self._rotate(self.vertex3, self.center, self.alpha)
-        self.vertex4 = self._rotate(self.vertex4, self.center, self.alpha)
-
-        self.vertex1 = (int(self.vertex1[0]), int(self.vertex1[1]))
-        self.vertex2 = (int(self.vertex2[0]), int(self.vertex2[1]))
-        self.vertex3 = (int(self.vertex3[0]), int(self.vertex3[1]))
-        self.vertex4 = (int(self.vertex4[0]), int(self.vertex4[1]))
-
-    def scale(self, ratio, offsx, offsy):
-        self.yc = (self.yc)* ratio + offsy
-        self.xc = (self.xc) * ratio + offsx
-        self.center = (self.xc, self.yc)
-        self.width = self.width * ratio
-        self.length = self.length * ratio
-
-    def _rotate(self, point, origin, alpha):
-        return ((point[0] - origin[0]) * math.cos(alpha * math.pi / 180) - (point[1] - origin[1]) * math.sin(
-            alpha * math.pi / 180) + origin[0],
-                (point[0] - origin[0]) * math.sin(alpha * math.pi / 180) + (point[1] - origin[1]) * math.cos(
-                    alpha * math.pi / 180) + origin[1])
-
-    def rotate(self, ratio):
-        self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
-        self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
-        self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
-        self.vertex4 = (self.xc - self.length / 2, self.yc - self.width / 2)
-
-        self.vertex1 = self._rotate(self.vertex1, self.center, self.alpha * ratio)
-        self.vertex2 = self._rotate(self.vertex2, self.center, self.alpha * ratio)
-        self.vertex3 = self._rotate(self.vertex3, self.center, self.alpha * ratio)
-        self.vertex4 = self._rotate(self.vertex4, self.center, self.alpha * ratio)
-
-        self.vertex1 = (int(self.vertex1[0]), int(self.vertex1[1]))
-        self.vertex2 = (int(self.vertex2[0]), int(self.vertex2[1]))
-        self.vertex3 = (int(self.vertex3[0]), int(self.vertex3[1]))
-        self.vertex4 = (int(self.vertex4[0]), int(self.vertex4[1]))
-
-    def resize(self, ratio):
-        self.width = self.width * ratio
-        self.length = self.length * ratio
-
-    def translate(self, offsx, offsy):
-        self.yc = self.yc + offsy
-        self.xc = self.xc + offsx
-        self.center = (self.xc, self.yc)
-
-    def flipx(self, axis):
-        self.xc = 2 * axis - self.xc
-        self.alpha = -self.alpha
-        self.center = (self.xc, self.yc)
 

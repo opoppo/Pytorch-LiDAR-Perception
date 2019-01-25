@@ -15,6 +15,8 @@ from maskrcnn_benchmark.modeling.matcher import Matcher
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 
+from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
+
 
 class RPNLossComputation(object):
     """
@@ -95,6 +97,28 @@ class RPNLossComputation(object):
             box_loss (Tensor
         """
         # print(targets,'===================================')
+        # TODO  square anchor box expand tragets in xyxy
+        for i, boxlist in enumerate(targets):
+            boxes = boxlist.bbox
+            for j, box in enumerate(boxes):
+                # print(box, '=====')
+                top_left, bottom_right = box[:2], box[2:]
+                l = abs(top_left[1] - bottom_right[1])
+                w = abs(top_left[0] - bottom_right[0])
+                xc = (top_left[0] + bottom_right[0]) / 2
+                yc = (top_left[1] + bottom_right[1]) / 2
+                if l > w:
+                    f = 1.2 * l
+                else:
+                    f = 1.2 * w
+                # print(f, xc, yc, '=============')
+                box = bBox_2D(f, f, xc, yc, 0)
+                box.xcyc2topleft()
+                box.xcyc2bottomright()
+
+                boxlist.bbox[j] = torch.Tensor([box.xtl, box.ytl, box.xbr, box.ybr])
+                # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
+
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets, orien_targets = self.prepare_targets(anchors, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
@@ -151,19 +175,19 @@ class RPNLossComputation(object):
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]
         )
-        # print(orien_targets[sampled_pos_inds],'=========orien===========')
-        # print(orien_regression[sampled_pos_inds].size(), '=========regression===========\n')
+        # print(orien_targets[sampled_pos_inds], '=========orien===========')
+        # print(orien_regression[sampled_pos_inds], '=========regression===========\n')
 
-        orien_loss = torch.sqrt(F.mse_loss(
+        orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds],
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
             # size_average=False,
             # beta=1,
-        )) / (sampled_pos_inds.numel() + 0.1)
+        ) / (sampled_pos_inds.numel() + 0.1)
 
         # print(orien_loss)
 
-        return objectness_loss, box_loss, orien_loss
+        return 2 * objectness_loss, 2 * box_loss, 3 * orien_loss
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):

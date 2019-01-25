@@ -5,6 +5,8 @@ import torchvision
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 
+from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
+
 
 class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
@@ -36,6 +38,18 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
         # print(len(anno),'=================anno=================  ')
+        noiseratio = ((torch.randn(2)).div_(20)).exp_()
+        noiseoffset = (torch.randn(2))
+        for ann in anno:
+            label = ann["bbox"]
+            orien = ann["rotation"]
+            box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2, orien)
+            box.rotate(noiseratio[0])
+            box.resize(noiseratio[1])
+            box.translate(noiseoffset[0], noiseoffset[1])
+            box.xcyc2topleft()
+            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
+            ann["rotation"] =box.alpha
 
         # filter crowd annotations
         # TODO might be better to add an extra field
@@ -44,7 +58,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         boxes = [obj["bbox"] for obj in anno]
         boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
         # print(boxes)
-        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")#=====================================
+        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")  # =====================================
 
         # print(target.bbox,'============================')
 
@@ -58,10 +72,11 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         target.add_field("masks", masks)
 
         # ====================================
-        rotations = [obj["rotation"]* 3.1415926 / 180 for obj in anno]
+        rotations = [obj["rotation"] * 3.1415926 / 180 for obj in anno]
+        # print(rotations,'====')
         rotations = torch.tensor(rotations)
         rotations = torch.stack((torch.sin(rotations), torch.cos(rotations)))  # COMPLEX space
-        rotations=torch.transpose(rotations, dim0=0, dim1=-1)   #  N*2 shape
+        rotations = torch.transpose(rotations, dim0=0, dim1=-1)  # N*2 shape
         # print(rotations)
         target.add_field("rotations", rotations)
 

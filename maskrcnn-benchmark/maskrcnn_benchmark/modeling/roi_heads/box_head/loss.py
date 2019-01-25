@@ -32,11 +32,13 @@ class FastRCNNLossComputation(object):
     def match_targets_to_proposals(self, proposal, target):
         # print(target.get_field("rotations"), '===================================')
         # print(proposal,target,'++++')
-        match_quality_matrix = boxlist_iou(target, proposal)
+        match_quality_matrix = boxlist_iou(target, proposal,type=1)    #  calculate the iter/ area1  !!!!!
+
+        # print(match_quality_matrix[match_quality_matrix>0],'++++++++++')
         matched_idxs = self.proposal_matcher(match_quality_matrix)
-        # print(matched_idxs,'++++++++++')
+        # print(matched_idxs[matched_idxs>0],'++++++++++')
         # Fast RCNN only need "labels" field for selecting the targets
-        target = target.copy_with_fields(["labels","rotations"])
+        target = target.copy_with_fields(["labels", "rotations"])
 
         # get the targets corresponding GT for each proposal
         # NB: need to clamp the indices because we can have a single
@@ -80,7 +82,6 @@ class FastRCNNLossComputation(object):
             orien_targets_per_image = matched_targets.get_field("rotations")
             # orien_targets_per_image = orien_targets_per_image[positive_inds]
 
-
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
             orien_targets.append(orien_targets_per_image)
@@ -110,6 +111,7 @@ class FastRCNNLossComputation(object):
                 labels, regression_targets, orien_targets, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
+            # print(labels_per_image,'===')
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
@@ -166,12 +168,14 @@ class FastRCNNLossComputation(object):
         )
         # print([proposal.get_field("regression_targets") for proposal in proposals],'===========')
 
-        classification_loss = F.cross_entropy(class_logits, labels)
+        # classification_loss = F.cross_entropy(class_logits, labels)
+        classification_loss = focal_loss_class(class_logits, labels)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
         # advanced indexing
         sampled_pos_inds_subset = torch.nonzero(labels > 0).squeeze(1)
+        # print(labels)
         labels_pos = labels[sampled_pos_inds_subset]
         map_inds = 4 * labels_pos[:, None] + torch.tensor([0, 1, 2, 3], device=device)
 
@@ -181,26 +185,21 @@ class FastRCNNLossComputation(object):
             size_average=False,
             beta=1,
         )
-        # print(orien_targets[sampled_pos_inds_subset],'=========orien===========')
-        # print(regression_targets[sampled_pos_inds_subset], '=========regression===========\n')
-        # print(labels.size(),orien_targets.size(),'\n=================================')
-        # print(orien_regression.size(),'\n',orien_targets.size(),'\n=================================')
-        # ===========================================================
-        # print(labels_pos,'=================================')
-        # print(orien_regression[sampled_pos_inds_subset],'\n',orien_targets[sampled_pos_inds_subset],'\n=================================')
 
+        # print(orien_targets, '=========orien===========')
+        # print(orien_regression, '=========regression===========\n')
         # print(sampled_pos_inds_subset,'\n',map_inds)
-        orien_loss = torch.sqrt(F.mse_loss(
+        orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds_subset],
             orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
             # size_average=False,
             # beta=1,
-        ))
+        )
 
-        box_loss = box_loss / (labels_pos.numel()+0.1)
-        orien_loss = orien_loss / (labels_pos.numel()+0.1)
+        box_loss = box_loss / (labels_pos.numel() + 0.1)
+        orien_loss = orien_loss / (labels_pos.numel() + 0.1)
 
-        return classification_loss, box_loss, orien_loss
+        return classification_loss, box_loss, 2 * orien_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
@@ -220,3 +219,10 @@ def make_roi_box_loss_evaluator(cfg):
     loss_evaluator = FastRCNNLossComputation(matcher, fg_bg_sampler, box_coder)
 
     return loss_evaluator
+
+
+def focal_loss_class(predictions, targets, alpha=1, gamma=2):
+    loss_class = torch.nn.NLLLoss()
+    predictions=F.log_softmax(predictions,dim=1)     # log(Pt)
+    # print(predictions,targets,'=====================')
+    return alpha * loss_class(predictions.mul((1 - predictions.exp()).pow(gamma)), targets)

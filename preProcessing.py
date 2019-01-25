@@ -44,17 +44,17 @@ for i, scan in enumerate(cloudata):
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
         box.bBoxCalcVertxex()
-        cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-        print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width,' a ',box.alpha)
-    cv2.imshow('scan', outImage)
+        # cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
+        # cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
+        # print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width,' a ',box.alpha)
+    # cv2.imshow('scan', outImage)
     print(i)
-    k=cv2.waitKey()
-    if k == 27:  # Esc for exiting
-        cv2.destroyAllWindows()
-        os._exit(1)
+    # k=cv2.waitKey()
+    # if k == 27:  # Esc for exiting
+    #     cv2.destroyAllWindows()
+    #     os._exit(1)
 
     img.append(outImage)
 
@@ -108,7 +108,7 @@ iminfo = {}
 anninfo = {}
 catinfo = {}
 trainsplit, valsplit, testsplit = int(ll * 0.70), int(ll * (0.70 + 0.15)), ll
-overfittest = 100
+overfittest = 1
 print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
 mwidth, mlength, mrotation, marea = 0, 0, 0, 0
 

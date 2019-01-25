@@ -43,14 +43,14 @@ def remove_small_boxes(boxlist, min_size):
     xywh_boxes = boxlist.convert("xywh").bbox
     _, _, ws, hs = xywh_boxes.unbind(dim=1)
     keep = (
-        (ws >= min_size) & (hs >= min_size)
+            (ws >= min_size) & (hs >= min_size)
     ).nonzero().squeeze(1)
     return boxlist[keep]
 
 
 # implementation from https://github.com/kuangliu/torchcv/blob/master/torchcv/utils/box.py
 # with slight modifications
-def boxlist_iou(boxlist1, boxlist2):
+def boxlist_iou(boxlist1, boxlist2, type=0):
     """Compute the intersection over union of two set of boxes.
     The box order must be (xmin, ymin, xmax, ymax).
 
@@ -66,7 +66,7 @@ def boxlist_iou(boxlist1, boxlist2):
     """
     if boxlist1.size != boxlist2.size:
         raise RuntimeError(
-                "boxlists should have same image size, got {}, {}".format(boxlist1, boxlist2))
+            "boxlists should have same image size, got {}, {}".format(boxlist1, boxlist2))
 
     N = len(boxlist1)
     M = len(boxlist2)
@@ -85,7 +85,13 @@ def boxlist_iou(boxlist1, boxlist2):
     inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
 
     iou = inter / (area1[:, None] + area2 - inter)
-    return iou
+    if type == 0:
+        return iou
+    else:
+        # print(box1,box2,'====')
+        pp = inter / area1[:, None]
+        # print(pp[pp > 0], '====')  # ,'///',area1[:, None],'=====')
+        return pp  # area1 should be the target box area
 
 
 # TODO redundant, remove
