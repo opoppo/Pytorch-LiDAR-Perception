@@ -170,7 +170,7 @@ class RPNLossComputation(object):
             regression_targets[sampled_pos_inds],
             beta=1.0 / 9,
             size_average=False,
-        ) / (sampled_pos_inds.numel() + 0.1)
+        ) / sampled_inds.numel()
 
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]
@@ -183,7 +183,7 @@ class RPNLossComputation(object):
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
             # size_average=False,
             # beta=1,
-        ) / (sampled_pos_inds.numel() + 0.1)
+        ) / sampled_inds.numel()
 
         # print(orien_loss)
 

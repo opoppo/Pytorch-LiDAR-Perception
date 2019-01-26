@@ -80,7 +80,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         # print(rotations)
         target.add_field("rotations", rotations)
 
-        # print(target.get_field('rotations'), '============================')
+        # print(target.get_field('rotations'), '============ooo================')
 
         # print(target,'============================================')
         target = target.clip_to_image(remove_empty=False)
@@ -89,7 +89,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
             img, target = self.transforms(img, target)
 
         # print(img.size(),'=================%d=================='%idx)
-
+        # print(target.get_field('rotations'), '============================')
         return img, target, idx
 
     def get_img_info(self, index):

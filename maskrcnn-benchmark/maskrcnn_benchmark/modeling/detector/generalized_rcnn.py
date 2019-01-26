@@ -31,6 +31,8 @@ class GeneralizedRCNN(nn.Module):
         self.roi_heads = build_roi_heads(cfg)
 
     def forward(self, images, targets=None):
+        # for target in targets:
+        #     print(target.get_field('rotations'), '==========')
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed

@@ -79,10 +79,11 @@ class Matcher(object):
 
         matches[below_low_threshold] = Matcher.BELOW_LOW_THRESHOLD
         matches[between_thresholds] = Matcher.BETWEEN_THRESHOLDS
+
         # print(matches[matches > 0], '--------')
         if self.allow_low_quality_matches:
             self.set_low_quality_matches_(matches, all_matches, match_quality_matrix)
-        # print(matches[matches>0],'--------')
+        # print(matches[matches>-1],'--------')
         return matches
 
     def set_low_quality_matches_(self, matches, all_matches, match_quality_matrix):
