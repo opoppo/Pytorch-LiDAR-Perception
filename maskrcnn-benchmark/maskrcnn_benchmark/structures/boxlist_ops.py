@@ -4,6 +4,7 @@ import torch
 from .bounding_box import BoxList
 
 from maskrcnn_benchmark.layers import nms as _box_nms
+from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 
 
 def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="score"):
@@ -76,22 +77,37 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
 
     box1, box2 = boxlist1.bbox, boxlist2.bbox
 
-    lt = torch.max(box1[:, None, :2], box2[:, :2])  # [N,M,2]
-    rb = torch.min(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
-
-    TO_REMOVE = 1
-
-    wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
-    inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
-
-    iou = inter / (area1[:, None] + area2 - inter)
     if type == 0:
-        return iou
+        lt = torch.max(box1[:, None, :2], box2[:, :2])  # [N,M,2]
+        rb = torch.min(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
+
+        TO_REMOVE = 1
+
+        wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
+        inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
+
+        iou = inter / (area1[:, None] + area2 - inter)
+
     else:
-        # print(box1,box2,'====')
-        pp = inter / area1[:, None]
+        wh1 = box1[:, 2:] - box1[:, :2]  # wh of target box1 by their br - tl
+        maxedge1 = torch.max(wh1[:, 0], wh1[:, 1])
+        xcyc1 = (box1[:, 2:] + box1[:, :2]) * 0.5
+        box3 = torch.cat((xcyc1 - maxedge1 * 0.5, xcyc1 + maxedge1 * 0.5), -1)  # square box3 correspond to box1
+        area3 = maxedge1.pow(2)
+
+        lt = torch.max(box3[:, None, :2], box2[:, :2])  # [N,M,2]
+        rb = torch.min(box3[:, None, 2:], box2[:, 2:])  # [N,M,2]
+
+        TO_REMOVE = 1
+
+        wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
+        inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
+
+        iou = inter / (area3[:, None] + area2 - inter)  # area1/3 should be the target box area
+
         # print(pp[pp > 0], '====')  # ,'///',area1[:, None],'=====')
-        return pp  # area1 should be the target box area
+
+    return iou
 
 
 # TODO redundant, remove

@@ -32,7 +32,7 @@ class FastRCNNLossComputation(object):
     def match_targets_to_proposals(self, proposal, target):
         # print(target.get_field("rotations"), '===================================')
         # print(proposal,target,'++++')
-        match_quality_matrix = boxlist_iou(target, proposal,type=1)    #  calculate the iter/ area1  !!!!!
+        match_quality_matrix = boxlist_iou(target, proposal, type=1)  # calculate the iter/ area1  !!!!!
 
         # print(match_quality_matrix[match_quality_matrix>0],'++++++++++')
         # print(target.get_field('rotations'),'==========')
@@ -190,20 +190,26 @@ class FastRCNNLossComputation(object):
             beta=1,
         )
 
-        # print(orien_targets[sampled_pos_inds_subset], '=========orien===========')
-        # print(orien_regression, '=========regression===========\n')
+
         # print(sampled_pos_inds_subset,'\n',map_inds)
         orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds_subset],
             orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+            reduction='sum',
             # size_average=False,
             # beta=1,
         )
-        # print(orien_loss,'///',labels_pos,'=============')
+        if torch.isnan(orien_loss) > 0:
+            print(orien_targets[sampled_pos_inds_subset], '=========target===========')
+            print(orien_regression[sampled_pos_inds_subset], '=========regression===========\n')
+            print(sampled_pos_inds_subset,'===subsetidx')
+            print(            box_regression[sampled_pos_inds_subset[:, None], map_inds],
+            regression_targets[sampled_pos_inds_subset],'============box')
+            print(orien_loss, '///', labels.numel(), '=============')
         box_loss = box_loss / labels.numel()
         orien_loss = orien_loss / labels.numel()
 
-        return classification_loss, box_loss, 2 * orien_loss
+        return classification_loss, box_loss,  orien_loss
 
 
 def make_roi_box_loss_evaluator(cfg):
@@ -227,6 +233,6 @@ def make_roi_box_loss_evaluator(cfg):
 
 def focal_loss_class(predictions, targets, alpha=1, gamma=2):
     loss_class = torch.nn.NLLLoss()
-    predictions=F.log_softmax(predictions,dim=1)     # log(Pt)
+    predictions = F.log_softmax(predictions, dim=1)  # log(Pt)
     # print(predictions,targets,'=====================')
     return alpha * loss_class(predictions.mul((1 - predictions.exp()).pow(gamma)), targets)

@@ -181,13 +181,14 @@ class RPNLossComputation(object):
         orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds],
             orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+            reduction='sum',
             # size_average=False,
             # beta=1,
         ) / sampled_inds.numel()
 
         # print(orien_loss)
 
-        return 2 * objectness_loss, 2 * box_loss, 3 * orien_loss
+        return  objectness_loss,  box_loss,  orien_loss
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):
