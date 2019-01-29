@@ -58,7 +58,6 @@ class PostProcessor(nn.Module):
         proposals = self.box_coder.decode(
             box_regression.view(sum(boxes_per_image), -1), concat_boxes
         )
-        # print(class_logits.size(), box_regression.size(),box_orien.size(),proposals.size(),'===============================================')
         num_classes = class_prob.shape[1]
 
         proposals = proposals.split(boxes_per_image, dim=0)

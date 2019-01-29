@@ -91,8 +91,10 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
     else:
         wh1 = box1[:, 2:] - box1[:, :2]  # wh of target box1 by their br - tl
         maxedge1 = torch.max(wh1[:, 0], wh1[:, 1])
+        maxedge11 = torch.cat((maxedge1[:, None], maxedge1[:, None]), -1)
         xcyc1 = (box1[:, 2:] + box1[:, :2]) * 0.5
-        box3 = torch.cat((xcyc1 - maxedge1 * 0.5, xcyc1 + maxedge1 * 0.5), -1)  # square box3 correspond to box1
+
+        box3 = torch.cat((xcyc1 - maxedge11 * 0.5, xcyc1 + maxedge11 * 0.5), -1)  # square box3 correspond to box1
         area3 = maxedge1.pow(2)
 
         lt = torch.max(box3[:, None, :2], box2[:, :2])  # [N,M,2]
@@ -102,7 +104,7 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
 
         wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
         inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
-
+        # print(inter.size(), area3[:, None].size(), area2.size(), area1.size(), '===========')
         iou = inter / (area3[:, None] + area2 - inter)  # area1/3 should be the target box area
 
         # print(pp[pp > 0], '====')  # ,'///',area1[:, None],'=====')

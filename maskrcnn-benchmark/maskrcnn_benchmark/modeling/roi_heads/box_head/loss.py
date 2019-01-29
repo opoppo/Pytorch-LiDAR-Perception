@@ -75,9 +75,12 @@ class FastRCNNLossComputation(object):
             labels_per_image[ignore_inds] = -1  # -1 is ignored by sampler
 
             # compute regression targets
+
             regression_targets_per_image = self.box_coder.encode(
                 matched_targets.bbox, proposals_per_image.bbox
             )
+            # for a,b,c in zip(matched_targets.bbox,proposals_per_image.bbox,regression_targets_per_image):
+            #     print(a,'///\n',b,'///\n',c,'======================')
             # positive_inds = torch.nonzero(labels_per_image > 0).squeeze(1)
             # compute orientation targets=======================================
             orien_targets_per_image = matched_targets.get_field("rotations")
@@ -182,10 +185,11 @@ class FastRCNNLossComputation(object):
         # print(labels)
         labels_pos = labels[sampled_pos_inds_subset]
         map_inds = 4 * labels_pos[:, None] + torch.tensor([0, 1, 2, 3], device=device)
-
+        # print(regression_targets[sampled_pos_inds_subset],'====================')
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds_subset[:, None], map_inds],
             regression_targets[sampled_pos_inds_subset],
+            # reduction='sum',
             size_average=False,
             beta=1,
         )
@@ -199,13 +203,13 @@ class FastRCNNLossComputation(object):
             # size_average=False,
             # beta=1,
         )
-        if torch.isnan(orien_loss) > 0:
-            print(orien_targets[sampled_pos_inds_subset], '=========target===========')
-            print(orien_regression[sampled_pos_inds_subset], '=========regression===========\n')
-            print(sampled_pos_inds_subset,'===subsetidx')
-            print(            box_regression[sampled_pos_inds_subset[:, None], map_inds],
-            regression_targets[sampled_pos_inds_subset],'============box')
-            print(orien_loss, '///', labels.numel(), '=============')
+        # if torch.isnan(orien_loss) > 0:   # catch nan
+        #     print(orien_targets[sampled_pos_inds_subset], '=========target===========')
+        #     print(orien_regression[sampled_pos_inds_subset], '=========regression===========\n')
+        #     print(sampled_pos_inds_subset,'===subsetidx')
+        #     print(            box_regression[sampled_pos_inds_subset[:, None], map_inds],
+        #     regression_targets[sampled_pos_inds_subset],'============box')
+        #     print(orien_loss, '///', labels.numel(), '=============')
         box_loss = box_loss / labels.numel()
         orien_loss = orien_loss / labels.numel()
 

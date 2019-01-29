@@ -24,7 +24,7 @@ MODEL:
     NUM_GROUPS: 32
     WIDTH_PER_GROUP: 8
 DATASETS:
-  TRAIN: ("coco_2014_overfit", )
+  TRAIN: ("coco_2014_overfit",)
   TEST: ("coco_2014_overfit",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32

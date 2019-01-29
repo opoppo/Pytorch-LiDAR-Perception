@@ -35,6 +35,7 @@ def reduce_loss_dict(loss_dict):
         reduced_losses = {k: v for k, v in zip(loss_names, all_losses)}
     return reduced_losses
 
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -49,14 +50,14 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 
 def do_train(
-    model,
-    data_loader,
-    optimizer,
-    scheduler,
-    checkpointer,
-    device,
-    checkpoint_period,
-    arguments,
+        model,
+        data_loader,
+        optimizer,
+        scheduler,
+        checkpointer,
+        device,
+        checkpoint_period,
+        arguments,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
@@ -67,7 +68,7 @@ def do_train(
     start_training_time = time.time()
     end = time.time()
 
-    # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
+    # lambda1 = lambda epoch: 10 ** np.random.uniform(0, -3)
     lambda1 = lambda epoch: get_triangular_lr(epoch, 300, 10 ** (-3), 10 ** (0))
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
@@ -86,7 +87,6 @@ def do_train(
 
         # print(type(targets[1]),targets[1],'===============================================')
         loss_dict = model(images, targets)
-
 
         losses = sum(loss for loss in loss_dict.values())
 
