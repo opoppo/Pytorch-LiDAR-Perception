@@ -32,7 +32,7 @@ def boxlist_nms(boxlist, nms_thresh, max_proposals=-1, score_field="score"):
     return boxlist.convert(mode)
 
 
-def remove_small_boxes(boxlist, min_size):
+def remove_small_boxes(boxlist, min_size, max_size):
     """
     Only keep boxes with both sides >= min_size
 
@@ -44,7 +44,8 @@ def remove_small_boxes(boxlist, min_size):
     xywh_boxes = boxlist.convert("xywh").bbox
     _, _, ws, hs = xywh_boxes.unbind(dim=1)
     keep = (
-            (ws >= min_size) & (hs >= min_size)
+            (ws >= min_size) & (hs >= min_size) &
+            (ws <= max_size) & (hs <= max_size)
     ).nonzero().squeeze(1)
     return boxlist[keep]
 

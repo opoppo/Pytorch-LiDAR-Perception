@@ -97,26 +97,26 @@ class RPNLossComputation(object):
             box_loss (Tensor
         """
         # print(targets,'===================================')
-        # TODO  square anchor box expand tragets in xyxy
-        for i, boxlist in enumerate(targets):
-            boxes = boxlist.bbox
-            for j, box in enumerate(boxes):
-                # print(box, '=====')
-                top_left, bottom_right = box[:2], box[2:]
-                l = abs(top_left[1] - bottom_right[1])
-                w = abs(top_left[0] - bottom_right[0])
-                xc = (top_left[0] + bottom_right[0]) / 2
-                yc = (top_left[1] + bottom_right[1]) / 2
-                if l > w:
-                    f = 1.2 * l
-                else:
-                    f = 1.2 * w
-                # print(f, xc, yc, '=============')
-                box = bBox_2D(f, f, xc, yc, 0)
-                box.xcyc2topleft()
-                box.xcyc2bottomright()
-
-                boxlist.bbox[j] = torch.Tensor([box.xtl, box.ytl, box.xbr, box.ybr])
+        # # TODO  square anchor box expand tragets in xyxy
+        # for i, boxlist in enumerate(targets):
+        #     boxes = boxlist.bbox
+        #     for j, box in enumerate(boxes):
+        #         # print(box, '=====')
+        #         top_left, bottom_right = box[:2], box[2:]
+        #         l = abs(top_left[1] - bottom_right[1])
+        #         w = abs(top_left[0] - bottom_right[0])
+        #         xc = (top_left[0] + bottom_right[0]) / 2
+        #         yc = (top_left[1] + bottom_right[1]) / 2
+        #         if l > w:
+        #             f = 1.2 * l
+        #         else:
+        #             f = 1.2 * w
+        #         # print(f, xc, yc, '=============')
+        #         box = bBox_2D(f, f, xc, yc, 0)
+        #         box.xcyc2topleft()
+        #         box.xcyc2bottomright()
+        #
+        #         boxlist.bbox[j] = torch.Tensor([box.xtl, box.ytl, box.xbr, box.ybr])
                 # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]

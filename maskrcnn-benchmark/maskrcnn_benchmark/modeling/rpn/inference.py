@@ -22,6 +22,7 @@ class RPNPostProcessor(torch.nn.Module):
             post_nms_top_n,
             nms_thresh,
             min_size,
+            max_size,
             box_coder=None,
             fpn_post_nms_top_n=None,
     ):
@@ -39,6 +40,7 @@ class RPNPostProcessor(torch.nn.Module):
         self.post_nms_top_n = post_nms_top_n
         self.nms_thresh = nms_thresh
         self.min_size = min_size
+        self.max_size = max_size
 
         if box_coder is None:
             box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
@@ -97,7 +99,7 @@ class RPNPostProcessor(torch.nn.Module):
         # print(objectness.size(), box_orien.size(),topk_idx.size() ,'==============================oo')
         batch_idx = torch.arange(N, device=device)[:, None]
         box_regression = box_regression[batch_idx, topk_idx]
-        box_orien=box_orien[batch_idx, topk_idx]
+        box_orien = box_orien[batch_idx, topk_idx]
 
         image_shapes = [box.size for box in anchors]
         concat_anchors = torch.cat([a.bbox for a in anchors], dim=0)
@@ -116,7 +118,7 @@ class RPNPostProcessor(torch.nn.Module):
             boxlist.add_field("objectness", score)
             boxlist.add_field("rotations", orien)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = remove_small_boxes(boxlist, self.min_size)
+            boxlist = remove_small_boxes(boxlist, self.min_size, self.max_size)
             boxlist = boxlist_nms(
                 boxlist,
                 self.nms_thresh,
@@ -197,12 +199,15 @@ def make_rpn_postprocessor(config, rpn_box_coder, is_train):
         post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TEST
     nms_thresh = config.MODEL.RPN.NMS_THRESH
     min_size = config.MODEL.RPN.MIN_SIZE
+    max_size = config.MODEL.RPN.MAX_SIZE
     box_selector = RPNPostProcessor(
         pre_nms_top_n=pre_nms_top_n,
         post_nms_top_n=post_nms_top_n,
         nms_thresh=nms_thresh,
         min_size=min_size,
+        max_size=max_size,
         box_coder=rpn_box_coder,
         fpn_post_nms_top_n=fpn_post_nms_top_n,
     )
+    # print(pre_nms_top_n,post_nms_top_n,fpn_post_nms_top_n,'====')
     return box_selector

@@ -20,7 +20,7 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 _C.MODEL = CN()
-_C.MODEL.RPN_ONLY = False
+_C.MODEL.RPN_ONLY = True
 _C.MODEL.MASK_ON = False
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
@@ -127,6 +127,7 @@ _C.MODEL.RPN.NMS_THRESH = 0.7
 # Proposal height and width both need to be greater than RPN_MIN_SIZE
 # (a the scale used during training or inference)
 _C.MODEL.RPN.MIN_SIZE = 0
+_C.MODEL.RPN.MAX_SIZE = 100
 # Number of top scoring RPN proposals to keep after combining proposals from
 # all FPN levels
 _C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
@@ -146,7 +147,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 30., 30.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 300., 300.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
@@ -241,7 +242,7 @@ _C.SOLVER.WARMUP_FACTOR = 1.0 / 3
 _C.SOLVER.WARMUP_ITERS = 2000
 _C.SOLVER.WARMUP_METHOD = "linear"
 
-_C.SOLVER.CHECKPOINT_PERIOD = 500
+_C.SOLVER.CHECKPOINT_PERIOD = 300
 
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will

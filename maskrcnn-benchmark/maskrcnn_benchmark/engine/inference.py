@@ -50,6 +50,7 @@ def compute_on_dataset(model, data_loader, device):
             # shutil.rmtree('./result')
             # os.mkdir('./result')
             cv2.imwrite('./result/%d.jpg' % i, im)
+            # print('imwritten%d'%i)
             # k=cv2.waitKey()
             # if k == 27:  # Esc for exiting
             #     cv2.destroyAllWindows()
@@ -141,7 +142,7 @@ def overlay_boxes(image, predictions,anntype):
         predictions (BoxList): the result of the computation by the model.
             It should contain the field `labels`.
     """
-    labels = predictions.get_field("labels")
+    # labels = predictions.get_field("labels")
     oriens = predictions.get_field("rotations")
     boxes = predictions.bbox
 
