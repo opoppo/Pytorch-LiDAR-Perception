@@ -33,15 +33,15 @@ def compute_on_dataset(model, data_loader, device):
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
         # print(images.tensors.size(),'=====================================')
-        x = images.tensors.permute(0,2, 3, 1)
+        x = images.tensors.permute(0, 2, 3, 1)
         images = x.cpu().detach().numpy().copy()
         # print(emptyImage.shape,type(emptyImage))
         # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
 
         del x
-        for j,(im,tar,out) in enumerate( zip(images,targets,output)):
-            overlay_boxes(im,out,'output')
-            overlay_boxes(im,tar,'targets')
+        for j, (im, tar, out) in enumerate(zip(images, targets, output)):
+            overlay_boxes(im, out, 'output')
+            overlay_boxes(im, tar, 'targets')
             # print(out.shape)
 
             # cv2.imshow('scan', im)
@@ -134,7 +134,7 @@ def inference(
                     **extra_args)
 
 
-def overlay_boxes(image, predictions,anntype):
+def overlay_boxes(image, predictions, anntype):
     """
     Adds the predicted boxes on top of the image
     Arguments:
@@ -149,25 +149,31 @@ def overlay_boxes(image, predictions,anntype):
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
     for box, orien in zip(boxes, oriens):
+
+        color = {'targets': (155, 255, 255), 'output': (155, 255, 55)}
+        offset = {'targets': 2, 'output': 0}
+
         box = box.squeeze_().detach().cpu().numpy()
-        alpha=torch.atan2(orien[:][0],orien[:][1])*180/3.1415926
+        alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / 3.1415926
         alpha = alpha.squeeze_().detach().cpu().numpy()
         # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
         top_left, bottom_right = box[:2], box[2:]
-        l = top_left[1] - bottom_right[1]
-        w = top_left[0] - bottom_right[0]
+        l = bottom_right[1] - top_left[1]
+        w = bottom_right[0] - top_left[0]
         xc = (top_left[0] + bottom_right[0]) / 2
         yc = (top_left[1] + bottom_right[1]) / 2
 
-        box = bBox_2D(l, w, xc, yc, alpha)
+        if l * w <= 1:
+            continue
+
+        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
         box.bBoxCalcVertxex()
-        color={'targets':(155,255,255),'output':(155,255,55)}
+
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex2, box.vertex4, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex3, box.vertex1, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
+        # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====')
 
     return image
-
-

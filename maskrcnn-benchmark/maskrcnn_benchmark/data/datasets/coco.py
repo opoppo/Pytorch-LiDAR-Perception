@@ -38,18 +38,18 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
         # print(len(anno),'=================anno=================  ')
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))
-        for ann in anno:
-            label = ann["bbox"]
-            orien = ann["rotation"]
-            box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2, orien)
-            box.rotate(noiseratio[0])
-            box.resize(noiseratio[1])
-            box.translate(noiseoffset[0], noiseoffset[1])
-            box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
-            ann["rotation"] =box.alpha
+        # noiseratio = ((torch.randn(2)).div_(20)).exp_()
+        # noiseoffset = (torch.randn(2))
+        # for ann in anno:
+        #     label = ann["bbox"]
+        #     orien = ann["rotation"]
+        #     box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2, orien)
+        #     box.rotate(noiseratio[0])
+        #     box.resize(noiseratio[1])
+        #     box.translate(noiseoffset[0], noiseoffset[1])
+        #     box.xcyc2topleft()
+        #     ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
+        #     ann["rotation"] =box.alpha
 
         # filter crowd annotations
         # TODO might be better to add an extra field

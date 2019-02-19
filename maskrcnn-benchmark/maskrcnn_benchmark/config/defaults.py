@@ -110,28 +110,28 @@ _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
 # Maximum overlap allowed between an anchor and ground-truth box for the
 # (anchor, gt box) pair to be a negative examples (IoU < BG_IOU_THRESHOLD
 # ==> negative RPN example)
-_C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
+_C.MODEL.RPN.BG_IOU_THRESHOLD = 0.1
 # Total number of RPN examples per image
 _C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
 # Target fraction of foreground (positive) examples per RPN minibatch
 _C.MODEL.RPN.POSITIVE_FRACTION = 0.5
 # Number of top scoring RPN proposals to keep before applying NMS
 # When FPN is used, this is *per FPN level* (not total)
-_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 12000
-_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 6000
+_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 120
+_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 60
 # Number of top scoring RPN proposals to keep after applying NMS
-_C.MODEL.RPN.POST_NMS_TOP_N_TRAIN = 2000
-_C.MODEL.RPN.POST_NMS_TOP_N_TEST = 1000
+_C.MODEL.RPN.POST_NMS_TOP_N_TRAIN = 20
+_C.MODEL.RPN.POST_NMS_TOP_N_TEST = 10
 # NMS threshold used on RPN proposals
-_C.MODEL.RPN.NMS_THRESH = 0.7
+_C.MODEL.RPN.NMS_THRESH = 0.4
 # Proposal height and width both need to be greater than RPN_MIN_SIZE
 # (a the scale used during training or inference)
-_C.MODEL.RPN.MIN_SIZE = 0
+_C.MODEL.RPN.MIN_SIZE = 1
 _C.MODEL.RPN.MAX_SIZE = 100
 # Number of top scoring RPN proposals to keep after combining proposals from
 # all FPN levels
-_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 2000
-_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 2000
+_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN = 200
+_C.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST = 200
 # Custom rpn head, empty to use default conv or separable conv
 _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 
@@ -147,7 +147,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 300., 300.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 10.,10.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
@@ -258,7 +258,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 4
+_C.TEST.IMS_PER_BATCH = 1
 
 # ---------------------------------------------------------------------------- #
 # Misc options
