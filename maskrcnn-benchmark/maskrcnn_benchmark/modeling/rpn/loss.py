@@ -37,7 +37,7 @@ class RPNLossComputation(object):
 
     def match_targets_to_anchors(self, anchor, target):
         # print(len(anchor),len(target),'==============================match=====')
-        match_quality_matrix = boxlist_iou(target, anchor)
+        match_quality_matrix = boxlist_iou(target, anchor, type=1)
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
@@ -117,7 +117,7 @@ class RPNLossComputation(object):
         #         box.xcyc2bottomright()
         #
         #         boxlist.bbox[j] = torch.Tensor([box.xtl, box.ytl, box.xbr, box.ybr])
-                # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
+        # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets, orien_targets = self.prepare_targets(anchors, targets)
@@ -165,6 +165,11 @@ class RPNLossComputation(object):
         regression_targets = torch.cat(regression_targets, dim=0)
         orien_targets = torch.cat(orien_targets, dim=0)
 
+        # to_rotated_boxes(regression_targets[sampled_pos_inds],
+        #                  orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor))
+
+        # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
+
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds],
             regression_targets[sampled_pos_inds],
@@ -188,7 +193,33 @@ class RPNLossComputation(object):
 
         # print(orien_loss)
 
-        return  objectness_loss,  box_loss,  orien_loss
+        return objectness_loss, box_loss, 0  # orien_loss
+
+
+def to_rotated_boxes(boxes, oriens):
+    boxes_with_oriens = torch.cat((boxes, oriens), dim=-1)
+    # print(boxes)
+    for j, boxnorien in enumerate(boxes_with_oriens):
+
+        # boxnorien = boxnorien.squeeze_()
+        alpha = torch.atan2(boxnorien[:][-2], boxnorien[:][-1]) * 180 / 3.1415926
+        # alpha = alpha.squeeze_()
+        # print(alpha,anntype,'====')
+        # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
+        top_left, bottom_right = boxnorien[:2], boxnorien[2:4]
+        l = bottom_right[1] - top_left[1]
+        w = bottom_right[0] - top_left[0]
+        xc = (top_left[0] + bottom_right[0]) / 2
+        yc = (top_left[1] + bottom_right[1]) / 2
+        # print(alpha,top_left,bottom_right,'=====')
+        if l * w <= 1:
+            continue
+
+        box = bBox_2D(l, w, xc, yc, alpha)
+        box.bBoxCalcVertxex()
+        print(boxes.size(), oriens.size(), boxnorien.size())
+        # boxes[j]=torch.
+        return
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):

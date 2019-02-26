@@ -118,7 +118,7 @@ class RPNPostProcessor(torch.nn.Module):
             boxlist.add_field("objectness", score)
             boxlist.add_field("rotations", orien)
             boxlist = boxlist.clip_to_image(remove_empty=False)
-            boxlist = remove_small_boxes(boxlist, self.min_size, self.max_size)
+            boxlist = remove_small_boxes(boxlist, self.min_size,self.max_size)
             boxlist = boxlist_nms(
                 boxlist,
                 self.nms_thresh,

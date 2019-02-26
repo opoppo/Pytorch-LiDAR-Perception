@@ -34,8 +34,8 @@ for i, scan in enumerate(cloudata):
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
 
         # print(box.xc,box.yc)
-        if box.xc==0 and box.yc ==0 and box.length==0 and box.width==0:
-            anndata[i][j] = [0,0,0,0,0]  # mark with 0
+        if box.xc == 0 and box.yc == 0 and box.length == 0 and box.width == 0:
+            anndata[i][j] = [0, 0, 0, 0, 0]  # mark with 0
             continue
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(300 / 50, 100, 20)
@@ -59,42 +59,42 @@ for i, scan in enumerate(cloudata):
     img.append(outImage)
 
 # Flipping
-augmentimg = []
-for i, im in enumerate(img):
-    imflipped = cv2.flip(im, 1)
-    augmentimg.append(imflipped)
-img = img + augmentimg
-del augmentimg
-
-augmentann = np.zeros(anndata.shape, dtype=np.float)
-for i, scan in enumerate(anndata):
-    for j, label in enumerate(scan):
-        if label[0]==0:
-            continue
-        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-        box.flipx(axis=int(resolution / 2))
-        augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
-anndata = np.concatenate((anndata, augmentann))
-del augmentann
+# augmentimg = []
+# for i, im in enumerate(img):
+#     imflipped = cv2.flip(im, 1)
+#     augmentimg.append(imflipped)
+# img = img + augmentimg
+# del augmentimg
+#
+# augmentann = np.zeros(anndata.shape, dtype=np.float)
+# for i, scan in enumerate(anndata):
+#     for j, label in enumerate(scan):
+#         if label[0]==0:
+#             continue
+#         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+#         box.flipx(axis=int(resolution / 2))
+#         augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+# anndata = np.concatenate((anndata, augmentann))
+# del augmentann
 
 # Adding noise : rotate, translate(x,y), resize
-print('Adding Noise...')
-augmentann = np.zeros(anndata.shape, dtype=np.float)
-for i, scan in enumerate(anndata):
-    for j, label in enumerate(scan):
-        if label[0]==0:
-            continue
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))
-        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-        box.rotate(noiseratio[0])
-        box.resize(noiseratio[1])
-        box.translate(noiseoffset[0], noiseoffset[1])
-        augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
-anndata = np.concatenate((anndata, augmentann))
-del augmentann
-img = img + img
-
+# print('Adding Noise...')
+# augmentann = np.zeros(anndata.shape, dtype=np.float)
+# for i, scan in enumerate(anndata):
+#     for j, label in enumerate(scan):
+#         if label[0]==0:
+#             continue
+#         noiseratio = ((torch.randn(2)).div_(20)).exp_()
+#         noiseoffset = (torch.randn(2))
+#         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+#         box.rotate(noiseratio[0])
+#         box.resize(noiseratio[1])
+#         box.translate(noiseoffset[0], noiseoffset[1])
+#         augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+# anndata = np.concatenate((anndata, augmentann))
+# del augmentann
+# img = img + img
+#
 ll = len(img)
 
 print(cloudata.shape, '\t', anndata.shape, '\t', ll)
@@ -108,7 +108,7 @@ iminfo = {}
 anninfo = {}
 catinfo = {}
 trainsplit, valsplit, testsplit = int(ll * 0.70), int(ll * (0.70 + 0.15)), ll
-overfittest = 1
+overfittest = 60
 print(trainsplit, valsplit - trainsplit, testsplit - valsplit)
 mwidth, mlength, mrotation, marea = 0, 0, 0, 0
 
@@ -121,8 +121,12 @@ os.mkdir('./maskrcnn-benchmark/datasets/coco/test2014')
 shutil.rmtree('./maskrcnn-benchmark/datasets/coco/overfit2014')
 os.mkdir('./maskrcnn-benchmark/datasets/coco/overfit2014')  # renew data space
 
+pixel_mean = np.array([0., 0., 0.])
+pixel_std = np.array([0., 0., 0.])
 for i, im in enumerate(img):
     cv2.imwrite('./maskrcnn-benchmark/datasets/coco/train2014/im%d.jpg' % i, im)
+    pixel_mean += np.array([np.mean(im[:, :, 0]), np.mean(im[:, :, 1]), np.mean(im[:, :, 2])])
+    pixel_std += np.array([np.std(im[:, :, 0]), np.std(im[:, :, 1]), np.std(im[:, :, 2])])
     iminfo = {
         "file_name": "im%d.jpg" % i,
         "height": im.shape[0],
@@ -130,12 +134,13 @@ for i, im in enumerate(img):
         "id": i
     }
     images.append(iminfo)
+print(pixel_mean / ll, '==pixel_mean==',pixel_std/ll,'==pixel_std==')
 
 idcount = 0
 for j, ann in enumerate(anndata):
     # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
-        if label[0]==0:
+        if label[0] == 0:
             continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.xcyc2topleft()

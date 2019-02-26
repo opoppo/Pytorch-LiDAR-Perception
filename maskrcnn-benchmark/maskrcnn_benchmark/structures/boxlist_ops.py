@@ -109,6 +109,7 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
         iou = inter / (area3[:, None] + area2 - inter)  # area1/3 should be the target box area
 
         # print(pp[pp > 0], '====')  # ,'///',area1[:, None],'=====')
+        # print('===============')
 
     return iou
 

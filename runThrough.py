@@ -72,12 +72,12 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
 
 # ====================================================================================================
 training = 1  # ????========================================================================================
-resume = 0  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
+resume = 1  # ====010:  test model   11X: train model   10X: train new   011: refresh dataset
 generateNewSets = 0  # REGENERATE the datasets !!!!!!!!!!!!!!!
 # ====================================================================================================
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
 
 if training and not resume:
     # net = torchvision.models.resnet101(pretrained=True)   #256  10s
@@ -86,7 +86,7 @@ if training and not resume:
     # net.last_linear = OutputLayer()
     net = pretrainedmodels.__dict__['inceptionv4'](num_classes=1000, pretrained='imagenet')  # 186  20s
     net.last_linear = OutputLayerInceptionv4()
-    net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1, 2, 3])
+    net = torch.nn.DataParallel(net.cuda(), device_ids=[0, 1])
 
 if generateNewSets:
 
@@ -115,11 +115,11 @@ print("datasets ", len(trainset), len(valset), len(testset))
 
 train_loader = data.DataLoader(
     dataset=trainset,
-    batch_size=186,  # 256 for 4 GPUs
+    batch_size=72,  # 256 for 4 GPUs
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    num_workers=24,
+    # num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(0, 3000, 1)))
 )
 val_loader = data.DataLoader(
@@ -128,7 +128,7 @@ val_loader = data.DataLoader(
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    num_workers=24,
+    # num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(3000, 3500, 1)))
 )
 test_loader = data.DataLoader(
@@ -137,29 +137,29 @@ test_loader = data.DataLoader(
     shuffle=False,
     drop_last=False,
     # pin_memory=True,
-    num_workers=24,
+    # num_workers=24,
     # sampler=data.SubsetRandomSampler(list(range(3500, 4239, 1)))
 )
 
 if resume and training:
-    net = torch.load('net-0.31')
-    print('net resumed')  # ==============================================================
+    net = torch.load('nettmp')
+    print('nettmp resumed')  # ==============================================================
 
 # Predicting or Testing============
 if resume and (not training):
     net = torch.load('net-0.31')
     print('nettt loaded')
 
-optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0.001)
+optimizer = torch.optim.Adam(params=net.parameters(), lr=0.001, weight_decay=0.0001)
 mseloss = nn.MSELoss(reduction='mean')
 # lambda1=lambda epoch: 10**np.random.uniform(-3,-6)
-lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-3), 10 ** (0))
+lambda1 = lambda epoch: get_triangular_lr(epoch, 100, 10 ** (-4), 10 ** (-2))
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
 # training
 if training:
 
-    EPOCH = 500
+    EPOCH = 1000
     break_flag = False
     prevvalloss, prevtrainloss = 10e30, 10e30
     ppp = 0
