@@ -213,7 +213,7 @@ class FastRCNNLossComputation(object):
         box_loss = box_loss / labels.numel()
         orien_loss = orien_loss / labels.numel()
 
-        return classification_loss, box_loss,  0#orien_loss
+        return classification_loss, box_loss,  orien_loss
 
 
 def make_roi_box_loss_evaluator(cfg):

@@ -167,7 +167,7 @@ def overlay_boxes(image, predictions, anntype):
         if l * w <= 1:
             continue
 
-        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], 0)
+        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
         box.bBoxCalcVertxex()
 
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
