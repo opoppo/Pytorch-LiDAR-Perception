@@ -193,7 +193,7 @@ class RPNLossComputation(object):
 
         # print(orien_loss)
 
-        return objectness_loss, box_loss, orien_loss
+        return objectness_loss, box_loss, 0#orien_loss
 
 
 def to_rotated_boxes(boxes, oriens):
