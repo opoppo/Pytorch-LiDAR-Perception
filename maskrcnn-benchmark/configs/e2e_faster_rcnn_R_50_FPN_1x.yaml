@@ -20,12 +20,12 @@ MODEL:
     FEATURE_EXTRACTOR: "FPN2MLPFeatureExtractor"
     PREDICTOR: "FPNPredictor"
 DATASETS:
-  TRAIN: ("coco_2014_overfit",)
-  TEST: ("coco_2014_overfit",)
+  TRAIN: ("coco_2014_train", "coco_2014_val")
+  TEST: ("coco_2014_test",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
 SOLVER:
   BASE_LR: 0.002
   WEIGHT_DECAY: 0.0005
   STEPS: (60000, 80000)
-  MAX_ITER: 1000
+  MAX_ITER: 10000
