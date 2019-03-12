@@ -194,15 +194,20 @@ class FastRCNNLossComputation(object):
             beta=1,
         )
 
-
         # print(sampled_pos_inds_subset,'\n',map_inds)
-        orien_loss = F.mse_loss(
+        orien_loss = smooth_l1_loss(
             orien_regression[sampled_pos_inds_subset],
             orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
-            reduction='sum',
-            # size_average=False,
-            # beta=1,
+            size_average=False,
+            beta=1.0 / 9,
         )
+        # orien_loss = F.mse_loss(
+        #     orien_regression[sampled_pos_inds_subset],
+        #     orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+        #     reduction='sum',
+        #     # size_average=False,
+        #     # beta=1,
+        # )
         # if torch.isnan(orien_loss) > 0:   # catch nan
         #     print(orien_targets[sampled_pos_inds_subset], '=========target===========')
         #     print(orien_regression[sampled_pos_inds_subset], '=========regression===========\n')
@@ -213,7 +218,7 @@ class FastRCNNLossComputation(object):
         box_loss = box_loss / labels.numel()
         orien_loss = orien_loss / labels.numel()
 
-        return classification_loss, box_loss,  orien_loss
+        return classification_loss, box_loss, orien_loss
 
 
 def make_roi_box_loss_evaluator(cfg):

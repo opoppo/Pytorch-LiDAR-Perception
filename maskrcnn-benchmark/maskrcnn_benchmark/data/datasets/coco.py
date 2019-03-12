@@ -38,8 +38,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
         # print(len(anno),'=================anno=================  ')
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))
+        noiseratio = ((torch.randn(2)).div_(20)).exp_()/5.0
+        noiseoffset = (torch.randn(2))/5.0      #  minimal bbox noise is better?
         for ann in anno:
             label = ann["bbox"]
             orien = ann["rotation"]
@@ -48,7 +48,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
             box.resize(noiseratio[1])
             box.translate(noiseoffset[0], noiseoffset[1])
             box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
+            ann["bbox"] = [box.xtl, box.ytl, box.width*1.2, box.length*1.2]     # slightly stretch the box may be better viewed?
             ann["rotation"] =box.alpha
 
         # filter crowd annotations

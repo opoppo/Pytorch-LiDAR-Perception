@@ -78,22 +78,22 @@ anndata = np.concatenate((anndata, augmentann))
 del augmentann
 
 # Adding noise : rotate, translate(x,y), resize
-print('Adding Noise...')
-augmentann = np.zeros(anndata.shape, dtype=np.float)
-for i, scan in enumerate(anndata):
-    for j, label in enumerate(scan):
-        if label[0]==0:
-            continue
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))
-        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-        box.rotate(noiseratio[0])
-        box.resize(noiseratio[1])
-        box.translate(noiseoffset[0], noiseoffset[1])
-        augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
-anndata = np.concatenate((anndata, augmentann))
-del augmentann
-img = img + img
+# print('Adding Noise...')
+# augmentann = np.zeros(anndata.shape, dtype=np.float)
+# for i, scan in enumerate(anndata):
+#     for j, label in enumerate(scan):
+#         if label[0]==0:
+#             continue
+#         noiseratio = ((torch.randn(2)).div_(20)).exp_()
+#         noiseoffset = (torch.randn(2))
+#         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+#         box.rotate(noiseratio[0])
+#         box.resize(noiseratio[1])
+#         box.translate(noiseoffset[0], noiseoffset[1])
+#         augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+# anndata = np.concatenate((anndata, augmentann))
+# del augmentann
+# img = img + img
 #
 ll = len(img)
 
@@ -141,6 +141,8 @@ for j, ann in enumerate(anndata):
     # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
         if label[0] == 0:
+            continue
+        if label[0]<5 or label[1]<5:      # filter small bbox
             continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.xcyc2topleft()

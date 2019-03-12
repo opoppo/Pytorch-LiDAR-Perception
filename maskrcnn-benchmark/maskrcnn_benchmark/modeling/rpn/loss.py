@@ -37,7 +37,7 @@ class RPNLossComputation(object):
 
     def match_targets_to_anchors(self, anchor, target):
         # print(len(anchor),len(target),'==============================match=====')
-        match_quality_matrix = boxlist_iou(target, anchor, type=1)
+        match_quality_matrix = boxlist_iou(target, anchor, type=1)     # type=1: matching the square GT bbox  type=0: normal matching
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
@@ -183,17 +183,24 @@ class RPNLossComputation(object):
         # print(orien_targets[sampled_pos_inds], '=========orien===========')
         # print(orien_regression[sampled_pos_inds], '=========regression===========\n')
 
-        orien_loss = F.mse_loss(
-            orien_regression[sampled_pos_inds],
-            orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
-            reduction='sum',
-            # size_average=False,
-            # beta=1,
-        ) / sampled_inds.numel()
+        # orien_loss = F.mse_loss(
+        #     orien_regression[sampled_pos_inds],
+        #     orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+        #     reduction='sum',
+        #     # size_average=False,
+        #     # beta=1,
+        # ) / sampled_inds.numel()
+
+        # orien_loss = smooth_l1_loss(
+        #     orien_regression[sampled_pos_inds],
+        #     orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+        #     size_average=False,
+        #     beta=1.0 / 9,
+        # ) / sampled_inds.numel()    #  NO Orientation Loss During RPN Stage
 
         # print(orien_loss)
 
-        return objectness_loss, box_loss, orien_loss
+        return objectness_loss, box_loss, 0#orien_loss
 
 
 def to_rotated_boxes(boxes, oriens):
