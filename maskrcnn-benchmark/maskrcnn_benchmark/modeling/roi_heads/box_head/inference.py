@@ -31,7 +31,7 @@ class PostProcessor(nn.Module):
         self.nms = nms
         self.detections_per_img = detections_per_img
         if box_coder is None:
-            box_coder = BoxCoder(weights=(10., 10., 5., 5.))
+            box_coder = BoxCoder(weights=(10., 10., 5., 5.,5.))
         self.box_coder = box_coder
 
     def forward(self, x, boxes):

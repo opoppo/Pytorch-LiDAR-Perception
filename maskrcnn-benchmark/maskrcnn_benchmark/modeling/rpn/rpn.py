@@ -31,7 +31,7 @@ class RPNHead(nn.Module):
         self.bbox_pred = nn.Conv2d(
             in_channels, num_anchors * 4, kernel_size=1, stride=1
         )
-        self.bbox_orien = nn.Conv2d(in_channels, num_anchors*2, kernel_size=1, stride=1)
+        self.bbox_orien = nn.Conv2d(in_channels, num_anchors*1, kernel_size=1, stride=1)
 
         for l in [self.conv, self.cls_logits, self.bbox_pred, self.bbox_orien]:
             torch.nn.init.normal_(l.weight, std=0.01)
@@ -40,14 +40,16 @@ class RPNHead(nn.Module):
     def forward(self, x):
         logits = []
         bbox_reg = []
-        bbox_orien = []
 
         for feature in x:
             t = F.relu(self.conv(feature))
             logits.append(self.cls_logits(t))
-            bbox_reg.append(self.bbox_pred(t))
-            bbox_orien.append(self.bbox_orien(t))
-        return logits, bbox_reg, bbox_orien
+            a=self.bbox_pred(t)
+            b=self.bbox_orien(t)
+            # print(a.size(),b.size(),'===============')
+            bbox_reg.append(torch.cat((a,b),1))
+            orien=torch.zeros_like(b)
+        return logits, bbox_reg,orien
 
 
 class RPNModule(torch.nn.Module):
@@ -69,7 +71,7 @@ class RPNModule(torch.nn.Module):
             cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
         )
 
-        rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
+        rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0,1.0))
 
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)

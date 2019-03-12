@@ -38,8 +38,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
         # print(len(anno),'=================anno=================  ')
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()/5.0
-        noiseoffset = (torch.randn(2))/5.0      #  minimal bbox noise is better?
+        noiseratio = ((torch.randn(2)).div_(20)).exp_() / 5.0
+        noiseoffset = (torch.randn(2)) / 5.0  # minimal bbox noise is better?
         for ann in anno:
             label = ann["bbox"]
             orien = ann["rotation"]
@@ -48,15 +48,16 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
             box.resize(noiseratio[1])
             box.translate(noiseoffset[0], noiseoffset[1])
             box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width*1.2, box.length*1.2]     # slightly stretch the box may be better viewed?
-            ann["rotation"] =box.alpha
+            ann["bbox"] = [box.xtl, box.ytl, box.width * 1.2, box.length * 1.2,
+                           box.alpha * 3.1415926 / 180]  # slightly stretch the box may be better viewed?
+            ann["rotation"] = box.alpha
 
         # filter crowd annotations
         # TODO might be better to add an extra field
         anno = [obj for obj in anno]  # if obj["iscrowd"] == 0] ===============================================
 
         boxes = [obj["bbox"] for obj in anno]
-        boxes = torch.as_tensor(boxes).reshape(-1, 4)  # guard against no boxes
+        boxes = torch.as_tensor(boxes).reshape(-1, 5)  # guard against no boxes
         # print(boxes)
         target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")  # =====================================
 

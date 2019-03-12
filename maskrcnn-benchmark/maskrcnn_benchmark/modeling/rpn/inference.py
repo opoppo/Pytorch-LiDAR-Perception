@@ -43,7 +43,7 @@ class RPNPostProcessor(torch.nn.Module):
         self.max_size = max_size
 
         if box_coder is None:
-            box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
+            box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0,1.0))
         self.box_coder = box_coder
 
         if fpn_post_nms_top_n is None:
@@ -87,10 +87,10 @@ class RPNPostProcessor(torch.nn.Module):
         # put in the same format as anchors
         objectness = objectness.permute(0, 2, 3, 1).reshape(N, -1)
         objectness = objectness.sigmoid()
-        box_orien = box_orien.view(N, -1, 2, H, W).permute(0, 3, 4, 1, 2)
-        box_orien = box_orien.reshape(N, -1, 2)
-        box_regression = box_regression.view(N, -1, 4, H, W).permute(0, 3, 4, 1, 2)
-        box_regression = box_regression.reshape(N, -1, 4)
+        # box_orien = box_orien.view(N, -1, 1, H, W).permute(0, 3, 4, 1, 2)
+        box_orien = box_orien.reshape(N, -1, 1)
+        box_regression = box_regression.view(N, -1, 5, H, W).permute(0, 3, 4, 1, 2)
+        box_regression = box_regression.reshape(N, -1, 5)
 
         num_anchors = A * H * W
 
@@ -99,17 +99,17 @@ class RPNPostProcessor(torch.nn.Module):
         # print(objectness.size(), box_orien.size(),topk_idx.size() ,'==============================oo')
         batch_idx = torch.arange(N, device=device)[:, None]
         box_regression = box_regression[batch_idx, topk_idx]
-        box_orien = box_orien[batch_idx, topk_idx]
+        # box_orien = box_orien[batch_idx, topk_idx]
 
         image_shapes = [box.size for box in anchors]
         concat_anchors = torch.cat([a.bbox for a in anchors], dim=0)
-        concat_anchors = concat_anchors.reshape(N, -1, 4)[batch_idx, topk_idx]
+        concat_anchors = concat_anchors.reshape(N, -1, 5)[batch_idx, topk_idx]
 
         proposals = self.box_coder.decode(
-            box_regression.view(-1, 4), concat_anchors.view(-1, 4)
+            box_regression.view(-1, 5), concat_anchors.view(-1, 5)
         )
 
-        proposals = proposals.view(N, -1, 4)
+        proposals = proposals.view(N, -1, 5)
 
         result = []
         # print(proposals.size(), objectness.size(), box_orien.size(), '==============================oo')
