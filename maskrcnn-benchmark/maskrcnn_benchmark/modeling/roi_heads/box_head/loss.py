@@ -39,7 +39,7 @@ class FastRCNNLossComputation(object):
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # print(matched_idxs[matched_idxs>-1],'++++++++++')
         # Fast RCNN only need "labels" field for selecting the targets
-        target = target.copy_with_fields(["labels", "rotations"])
+        target = target.copy_with_fields(["labels"])
 
         # get the targets corresponding GT for each proposal
         # NB: need to clamp the indices because we can have a single
@@ -55,7 +55,7 @@ class FastRCNNLossComputation(object):
     def prepare_targets(self, proposals, targets):
         labels = []
         regression_targets = []
-        orien_targets = []
+        # orien_targets = []
         # print(list(target.get_field("rotations") for target in targets), '===================================')
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
@@ -83,14 +83,14 @@ class FastRCNNLossComputation(object):
             #     print(a,'///\n',b,'///\n',c,'======================')
             # positive_inds = torch.nonzero(labels_per_image > 0).squeeze(1)
             # compute orientation targets=======================================
-            orien_targets_per_image = matched_targets.get_field("rotations")
+            # orien_targets_per_image = matched_targets.get_field("rotations")
             # orien_targets_per_image = orien_targets_per_image[positive_inds]
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
-            orien_targets.append(orien_targets_per_image)
+            # orien_targets.append(orien_targets_per_image)
         # print(orien_targets, '===================================')
-        return labels, regression_targets, orien_targets
+        return labels, regression_targets#, orien_targets
 
     def subsample(self, proposals, targets):
         # for target in targets:
@@ -105,15 +105,15 @@ class FastRCNNLossComputation(object):
             targets (list[BoxList])
         """
 
-        labels, regression_targets, orien_targets = self.prepare_targets(proposals, targets)
+        labels, regression_targets = self.prepare_targets(proposals, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
 
         # print(orien_targets,'======================================')
 
         proposals = list(proposals)
         # add corresponding label and regression_targets information to the bounding boxes============
-        for labels_per_image, regression_targets_per_image, orien_targets_per_image, proposals_per_image in zip(
-                labels, regression_targets, orien_targets, proposals
+        for labels_per_image, regression_targets_per_image, proposals_per_image in zip(
+                labels, regression_targets, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
             # print(labels_per_image,'===')
@@ -121,7 +121,7 @@ class FastRCNNLossComputation(object):
                 "regression_targets", regression_targets_per_image
             )
             # ===================================================================
-            proposals_per_image.add_field("rotations", orien_targets_per_image)
+            # proposals_per_image.add_field("rotations", orien_targets_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
@@ -136,7 +136,7 @@ class FastRCNNLossComputation(object):
         # print(proposals_per_image.get_field("rotations"),"===========================================")
         return proposals
 
-    def __call__(self, class_logits, box_regression, box_orien):
+    def __call__(self, class_logits, box_regression):
         """
         Computes the loss for Faster R-CNN.
         This requires that the subsample method has been called beforehand.
@@ -154,7 +154,7 @@ class FastRCNNLossComputation(object):
 
         class_logits = cat(class_logits, dim=0)
         box_regression = cat(box_regression, dim=0)
-        orien_regression = cat(box_orien, dim=0)
+        # orien_regression = cat(box_orien, dim=0)
         device = class_logits.device
         # print(class_logits.size(), '\n',box_regression.size(), '\n', orien_regression.size(),'\n=================================')
 
@@ -170,9 +170,9 @@ class FastRCNNLossComputation(object):
         )
 
         # =========================================================
-        orien_targets = cat(
-            [proposal.get_field("rotations") for proposal in proposals], dim=0
-        )
+        # orien_targets = cat(
+        #     [proposal.get_field("rotations") for proposal in proposals], dim=0
+        # )
         # print([proposal.get_field("regression_targets") for proposal in proposals],'===========')
 
         # classification_loss = F.cross_entropy(class_logits, labels)
@@ -195,12 +195,12 @@ class FastRCNNLossComputation(object):
         )
 
         # print(sampled_pos_inds_subset,'\n',map_inds)
-        orien_loss = smooth_l1_loss(
-            orien_regression[sampled_pos_inds_subset],
-            orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
-            size_average=False,
-            beta=1.0 / 9,
-        )
+        # orien_loss = smooth_l1_loss(
+        #     orien_regression[sampled_pos_inds_subset],
+        #     orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+        #     size_average=False,
+        #     beta=1.0 / 9,
+        # )
         # orien_loss = F.mse_loss(
         #     orien_regression[sampled_pos_inds_subset],
         #     orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
@@ -216,9 +216,9 @@ class FastRCNNLossComputation(object):
         #     regression_targets[sampled_pos_inds_subset],'============box')
         #     print(orien_loss, '///', labels.numel(), '=============')
         box_loss = box_loss / labels.numel()
-        orien_loss = orien_loss / labels.numel()
+        # orien_loss = orien_loss / labels.numel()
 
-        return classification_loss, box_loss, orien_loss
+        return classification_loss, box_loss#, orien_loss
 
 
 def make_roi_box_loss_evaluator(cfg):

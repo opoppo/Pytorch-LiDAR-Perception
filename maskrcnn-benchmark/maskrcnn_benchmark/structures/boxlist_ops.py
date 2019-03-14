@@ -43,13 +43,12 @@ def remove_small_boxes(boxlist, min_size, max_size):
     # TODO maybe add an API for querying the ws / hs
     xywh_boxes = boxlist.convert("xywh").bbox
 
-    _, _, ws, hs,ori = xywh_boxes.unbind(dim=1)
+    _, _, ws, hs, ori = xywh_boxes.unbind(dim=1)
 
     keep = (
             (ws >= min_size) & (hs >= min_size) &
             (ws <= max_size) & (hs <= max_size)
     ).nonzero().squeeze(1)
-    print(boxlist,keep,'+++')
     return boxlist[keep]
 
 
@@ -83,7 +82,7 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
 
     if type == 0:
         lt = torch.max(box1[:, None, :2], box2[:, :2])  # [N,M,2]
-        rb = torch.min(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
+        rb = torch.min(box1[:, None, 2:4], box2[:, 2:4])  # [N,M,2]
 
         TO_REMOVE = 1
 
@@ -93,16 +92,16 @@ def boxlist_iou(boxlist1, boxlist2, type=0):
         iou = inter / (area1[:, None] + area2 - inter)
 
     else:
-        wh1 = box1[:, 2:] - box1[:, :2]  # wh of target box1 by their br - tl
+        wh1 = box1[:, 2:4] - box1[:, :2]  # wh of target box1 by their br - tl
         maxedge1 = torch.max(wh1[:, 0], wh1[:, 1])
         maxedge11 = torch.cat((maxedge1[:, None], maxedge1[:, None]), -1)
-        xcyc1 = (box1[:, 2:] + box1[:, :2]) * 0.5
+        xcyc1 = (box1[:, 2:4] + box1[:, :2]) * 0.5
 
         box3 = torch.cat((xcyc1 - maxedge11 * 0.5, xcyc1 + maxedge11 * 0.5), -1)  # square box3 correspond to box1
         area3 = maxedge1.pow(2)
 
         lt = torch.max(box3[:, None, :2], box2[:, :2])  # [N,M,2]
-        rb = torch.min(box3[:, None, 2:], box2[:, 2:])  # [N,M,2]
+        rb = torch.min(box3[:, None, 2:4], box2[:, 2:4])  # [N,M,2]
 
         TO_REMOVE = 1
 

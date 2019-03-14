@@ -65,8 +65,7 @@ class Matcher(object):
         # Max over gt elements (dim 0) to find best gt candidate for each prediction
         # print(match_quality_matrix[match_quality_matrix>0.5],'=====')
         matched_vals, matches = match_quality_matrix.max(dim=0)   #zero means matched???
-        # print(matched_vals[matched_vals>0.5],'============')
-        # print(matches[matches > 0], '++++++')
+
         if self.allow_low_quality_matches:
             all_matches = matches.clone()
 

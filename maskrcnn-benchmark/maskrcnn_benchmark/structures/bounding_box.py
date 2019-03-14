@@ -101,7 +101,7 @@ class BoxList(object):
         if ratios[0] == ratios[1]:
             ratio = ratios[0]
             # print(self.bbox[:,None,4].size())
-            scaled_box = torch.cat((self.bbox[:,:4] * ratio, self.bbox[:,None,4]), -1)
+            scaled_box = torch.cat((self.bbox[:, :4] * ratio, self.bbox[:, None, 4]), -1)
             bbox = BoxList(scaled_box, size, mode=self.mode)
             # bbox._copy_extra_fields(self)
             for k, v in self.extra_fields.items():
@@ -155,7 +155,8 @@ class BoxList(object):
             transposed_xmax = xmax
             transposed_ymin = image_height - ymax
             transposed_ymax = image_height - ymin
-            transposed_orien = 3.14159 - orien if orien >= 0 else -3.14159 - orien
+            transposed_orien = - orien + (orien >= 0).type(torch.FloatTensor) * 3.14159 + (orien < 0).type(
+                torch.FloatTensor) * (-3.14159)
 
         transposed_boxes = torch.cat(
             (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax, transposed_orien), dim=-1
@@ -262,6 +263,6 @@ if __name__ == "__main__":
     print(s_bbox)
     print(s_bbox.bbox)
 
-    t_bbox = bbox.transpose(0)
+    t_bbox = bbox.transpose(1)
     print(t_bbox)
     print(t_bbox.bbox)

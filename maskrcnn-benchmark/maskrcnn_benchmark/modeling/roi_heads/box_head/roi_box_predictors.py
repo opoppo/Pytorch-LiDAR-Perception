@@ -54,13 +54,13 @@ class FPNPredictor(nn.Module):
         scores = self.cls_score(x)
         a=self.bbox_pred(x)
         b=self.bbox_orien(x)
-        print(a.size(), b.size(), '===============')
+        # print(a.size(), b.size(), '===============')
         bbox_deltas = torch.cat((a,b),1)
-        orien=torch.zeros_like(b)
+        # orien=torch.zeros_like(b)
         # print(scores, '=========', bbox_deltas, '=========')
         # ====================================
         # print(bbox_orien.size(),'====',scores.size(),bbox_deltas.size(),'==============')
-        return scores, bbox_deltas,orien
+        return scores, bbox_deltas#,orien
 
 
 _ROI_BOX_PREDICTOR = {

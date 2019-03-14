@@ -46,14 +46,14 @@ class PostProcessor(nn.Module):
             results (list[BoxList]): one BoxList for each image, containing
                 the extra fields labels and scores
         """
-        class_logits, box_regression,box_orien = x
+        class_logits, box_regression = x
         class_prob = F.softmax(class_logits, -1)
 
         # TODO think about a representation of batch of boxes
         image_shapes = [box.size for box in boxes]
         boxes_per_image = [len(box) for box in boxes]
         concat_boxes = torch.cat([a.bbox for a in boxes], dim=0)
-        concat_oriens=torch.cat([a.get_field('rotations') for a in boxes],dim=0)
+        # concat_oriens=torch.cat([a.get_field('rotations') for a in boxes],dim=0)
 
         proposals = self.box_coder.decode(
             box_regression.view(sum(boxes_per_image), -1), concat_boxes
@@ -62,19 +62,19 @@ class PostProcessor(nn.Module):
 
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
-        oriens=concat_oriens.split(boxes_per_image,dim=0)
+        # oriens=concat_oriens.split(boxes_per_image,dim=0)
 
         results = []
-        for prob, boxes_per_img, image_shape, orien_per_image in zip(
-                class_prob, proposals, image_shapes,oriens
+        for prob, boxes_per_img, image_shape in zip(
+                class_prob, proposals
         ):
-            boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape,orien_per_image)
+            boxlist = self.prepare_boxlist(boxes_per_img, prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
             boxlist = self.filter_results(boxlist, num_classes)
             results.append(boxlist)
         return results
 
-    def prepare_boxlist(self, boxes, scores, image_shape, oriens):
+    def prepare_boxlist(self, boxes, scores, image_shape):
         """
         Returns BoxList from `boxes` and adds probability scores information
         as an extra field
@@ -87,12 +87,12 @@ class PostProcessor(nn.Module):
         dataset (including the background class). `scores[i, j]`` corresponds to the
         box at `boxes[i, j * 4:(j + 1) * 4]`.
         """
-        boxes = boxes.reshape(-1, 4)
+        boxes = boxes.reshape(-1, 5)
         scores = scores.reshape(-1)
-        oriens = oriens.reshape(-1,2)
+        # oriens = oriens.reshape(-1,2)
         boxlist = BoxList(boxes, image_shape, mode="xyxy")
         boxlist.add_field("scores", scores)
-        boxlist.add_field("rotations", oriens)
+        # boxlist.add_field("rotations", oriens)
         return boxlist
 
     def filter_results(self, boxlist, num_classes):
@@ -101,9 +101,9 @@ class PostProcessor(nn.Module):
         """
         # unwrap the boxlist to avoid additional overhead.
         # if we had multi-class NMS, we could perform this directly on the boxlist
-        boxes = boxlist.bbox.reshape(-1, num_classes * 4)
+        boxes = boxlist.bbox.reshape(-1, num_classes * 5)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
-        oriens=boxlist.get_field("rotations").reshape(-1,2)
+        # oriens=boxlist.get_field("rotations").reshape(-1,2)
 
         device = scores.device
         result = []
@@ -113,11 +113,11 @@ class PostProcessor(nn.Module):
         for j in range(1, num_classes):
             inds = inds_all[:, j].nonzero().squeeze(1)
             scores_j = scores[inds, j]
-            boxes_j = boxes[inds, j * 4: (j + 1) * 4]
-            oriens_j=oriens[inds]
+            boxes_j = boxes[inds, j * 5: (j + 1) * 5]
+            # oriens_j=oriens[inds]
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
-            boxlist_for_class.add_field("rotations",oriens_j)
+            # boxlist_for_class.add_field("rotations",oriens_j)
             boxlist_for_class = boxlist_nms(
                 boxlist_for_class, self.nms, score_field="scores"
             )

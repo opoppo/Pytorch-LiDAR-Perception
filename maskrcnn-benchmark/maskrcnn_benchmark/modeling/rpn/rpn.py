@@ -48,8 +48,8 @@ class RPNHead(nn.Module):
             b=self.bbox_orien(t)
             # print(a.size(),b.size(),'===============')
             bbox_reg.append(torch.cat((a,b),1))
-            orien=torch.zeros_like(b)
-        return logits, bbox_reg,orien
+            # orien=torch.zeros_like(b)
+        return logits, bbox_reg#,orien
 
 
 class RPNModule(torch.nn.Module):
@@ -101,15 +101,15 @@ class RPNModule(torch.nn.Module):
                 testing, it is an empty dict.
         """
 
-        objectness, rpn_box_regression, rpn_box_orien = self.head(features)
+        objectness, rpn_box_regression = self.head(features)
         anchors = self.anchor_generator(images, features)
 
         if self.training:
-            return self._forward_train(anchors, objectness, rpn_box_regression,rpn_box_orien, targets)
+            return self._forward_train(anchors, objectness, rpn_box_regression, targets)
         else:
-            return self._forward_test(anchors, objectness, rpn_box_regression,rpn_box_orien)
+            return self._forward_test(anchors, objectness, rpn_box_regression)
 
-    def _forward_train(self, anchors, objectness, rpn_box_regression,rpn_box_orien, targets):
+    def _forward_train(self, anchors, objectness, rpn_box_regression, targets):
         if self.cfg.MODEL.RPN_ONLY:
             # When training an RPN-only model, the loss is determined by the
             # predicted objectness and rpn_box_regression values and there is
@@ -121,20 +121,20 @@ class RPNModule(torch.nn.Module):
             # sampled into a training batch.
             with torch.no_grad():
                 boxes = self.box_selector_train(
-                    anchors, objectness, rpn_box_regression, rpn_box_orien,targets
+                    anchors, objectness, rpn_box_regression,targets
                 )
-        loss_objectness, loss_rpn_box_reg ,loss_rpn_box_orien= self.loss_evaluator(
-            anchors, objectness, rpn_box_regression,rpn_box_orien, targets
+        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(
+            anchors, objectness, rpn_box_regression, targets
         )
         losses = {
             "loss_objectness": loss_objectness,
             "loss_rpn_box_reg": loss_rpn_box_reg,
-            "loss_rpn_box_orien":loss_rpn_box_orien
+            # "loss_rpn_box_orien":loss_rpn_box_orien
         }
         return boxes, losses
 
-    def _forward_test(self, anchors, objectness, rpn_box_regression,rpn_box_orien):
-        boxes = self.box_selector_test(anchors, objectness, rpn_box_regression,rpn_box_orien)
+    def _forward_test(self, anchors, objectness, rpn_box_regression):
+        boxes = self.box_selector_test(anchors, objectness, rpn_box_regression)
         if self.cfg.MODEL.RPN_ONLY:
             # For end-to-end models, the RPN proposals are an intermediate state
             # and don't bother to sort them in decreasing score order. For RPN-only

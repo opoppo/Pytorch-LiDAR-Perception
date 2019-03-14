@@ -59,7 +59,7 @@ class RPNPostProcessor(torch.nn.Module):
         # Get the device we're operating on
         device = proposals[0].bbox.device
 
-        gt_boxes = [target.copy_with_fields(["rotations"]) for target in targets]
+        gt_boxes = [target.copy_with_fields([]) for target in targets]
 
         # later cat of bbox requires all fields to be present for all bbox
         # so we need to add a dummy for objectness that's missing
@@ -73,7 +73,7 @@ class RPNPostProcessor(torch.nn.Module):
 
         return proposals
 
-    def forward_for_single_feature_map(self, anchors, objectness, box_regression, box_orien):
+    def forward_for_single_feature_map(self, anchors, objectness, box_regression):
         """
         Arguments:
             anchors: list[BoxList]
@@ -88,7 +88,7 @@ class RPNPostProcessor(torch.nn.Module):
         objectness = objectness.permute(0, 2, 3, 1).reshape(N, -1)
         objectness = objectness.sigmoid()
         # box_orien = box_orien.view(N, -1, 1, H, W).permute(0, 3, 4, 1, 2)
-        box_orien = box_orien.reshape(N, -1, 1)
+        # box_orien = box_orien.reshape(N, -1, 1)
         box_regression = box_regression.view(N, -1, 5, H, W).permute(0, 3, 4, 1, 2)
         box_regression = box_regression.reshape(N, -1, 5)
 
@@ -113,10 +113,10 @@ class RPNPostProcessor(torch.nn.Module):
 
         result = []
         # print(proposals.size(), objectness.size(), box_orien.size(), '==============================oo')
-        for proposal, score, im_shape, orien in zip(proposals, objectness, image_shapes, box_orien):
+        for proposal, score, im_shape in zip(proposals, objectness, image_shapes):
             boxlist = BoxList(proposal, im_shape, mode="xyxy")
             boxlist.add_field("objectness", score)
-            boxlist.add_field("rotations", orien)
+            # boxlist.add_field("rotations", orien)
             boxlist = boxlist.clip_to_image(remove_empty=False)
             boxlist = remove_small_boxes(boxlist, self.min_size,self.max_size)
             boxlist = boxlist_nms(
@@ -128,7 +128,7 @@ class RPNPostProcessor(torch.nn.Module):
             result.append(boxlist)
         return result
 
-    def forward(self, anchors, objectness, box_regression, box_orien, targets=None):
+    def forward(self, anchors, objectness, box_regression,  targets=None):
         """
         Arguments:
             anchors: list[list[BoxList]]
@@ -142,8 +142,8 @@ class RPNPostProcessor(torch.nn.Module):
         sampled_boxes = []
         num_levels = len(objectness)
         anchors = list(zip(*anchors))
-        for a, o, b, bo in zip(anchors, objectness, box_regression, box_orien):
-            sampled_boxes.append(self.forward_for_single_feature_map(a, o, b, bo))
+        for a, o, b in zip(anchors, objectness, box_regression):
+            sampled_boxes.append(self.forward_for_single_feature_map(a, o, b))
 
         boxlists = list(zip(*sampled_boxes))
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
