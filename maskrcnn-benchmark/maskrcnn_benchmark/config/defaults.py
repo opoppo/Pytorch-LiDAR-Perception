@@ -106,7 +106,7 @@ _C.MODEL.RPN.STRADDLE_THRESH = 0
 # Minimum overlap required between an anchor and ground-truth box for the
 # (anchor, gt box) pair to be a positive example (IoU >= FG_IOU_THRESHOLD
 # ==> positive RPN example)
-_C.MODEL.RPN.FG_IOU_THRESHOLD = 0.95
+_C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
 # Maximum overlap allowed between an anchor and ground-truth box for the
 # (anchor, gt box) pair to be a negative examples (IoU < BG_IOU_THRESHOLD
 # ==> negative RPN example)
@@ -161,10 +161,10 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.05
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.55
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
-_C.MODEL.ROI_HEADS.NMS = 0.5
+_C.MODEL.ROI_HEADS.NMS = 0.4
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
 _C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 3

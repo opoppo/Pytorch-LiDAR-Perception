@@ -15,12 +15,17 @@ from ..utils.comm import synchronize
 import cv2
 import shutil
 from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
+import numpy as np
+import numpy.linalg as la
 
 
 def compute_on_dataset(model, data_loader, device):
     model.eval()
     results_dict = {}
     cpu_device = torch.device("cpu")
+    eval_distance = []
+    outcenterlist = 0
+    tarcenterlist = 0
     for i, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
         # print(targets,'============================')
@@ -40,8 +45,22 @@ def compute_on_dataset(model, data_loader, device):
 
         del x
         for j, (im, tar, out) in enumerate(zip(images, targets, output)):
-            overlay_boxes(im, out, 'output')
-            overlay_boxes(im, tar, 'targets')
+            outcenter = overlay_boxes(im, out, 'output')
+            tarcenter = overlay_boxes(im, tar, 'targets')
+            m, n = outcenter.shape
+            o, p = tarcenter.shape
+            if p == 0:
+                continue
+            outcenterlist += n
+            tarcenterlist += p
+            if n == 0:
+                continue
+            D = np.zeros([n, p])
+            for i in range(n):
+                for j in range(p):
+                    D[i, j] = la.norm(outcenter[:, i] - tarcenter[:, j])  # distance matrix
+            for ii in range(p):
+                eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
             # print(out.shape)
 
             # cv2.imshow('scan', im)
@@ -49,13 +68,15 @@ def compute_on_dataset(model, data_loader, device):
             # torch.save(im,'%d'%i)
             # shutil.rmtree('./result')
             # os.mkdir('./result')
-            cv2.imwrite('./result/%d.jpg' % i, im)
+
+            # cv2.imwrite('./result/%d.jpg' % i, im)
+
             # print('imwritten%d'%i)
             # k=cv2.waitKey()
             # if k == 27:  # Esc for exiting
             #     cv2.destroyAllWindows()
             #     os._exit(1)
-
+    print(eval_distance.__len__(), sum(np.array(eval_distance) < 0.35 * 18), outcenterlist, tarcenterlist, '+++++++')
     return results_dict
 
 
@@ -145,6 +166,8 @@ def overlay_boxes(image, predictions, anntype):
     # labels = predictions.get_field("labels")
     oriens = predictions.get_field("rotations")
     boxes = predictions.bbox
+    xclist = []
+    yclist = []
 
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
@@ -163,11 +186,13 @@ def overlay_boxes(image, predictions, anntype):
         w = bottom_right[0] - top_left[0]
         xc = (top_left[0] + bottom_right[0]) / 2
         yc = (top_left[1] + bottom_right[1]) / 2
+        xclist.append(xc)
+        yclist.append(yc)
 
         if l * w <= 1:
             continue
 
-        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
+        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], 0)  # alpha)
         box.bBoxCalcVertxex()
 
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
@@ -176,4 +201,4 @@ def overlay_boxes(image, predictions, anntype):
         cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
         # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====',l*w,'\t',l,'\t',w)
 
-    return image
+    return np.array([xclist, yclist], dtype=float)
