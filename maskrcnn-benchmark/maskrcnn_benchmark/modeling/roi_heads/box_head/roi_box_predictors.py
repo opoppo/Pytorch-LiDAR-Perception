@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from torch import nn
+import torch
 
 
 class FastRCNNPredictor(nn.Module):
@@ -41,7 +42,7 @@ class FPNPredictor(nn.Module):
         self.cls_score = nn.Linear(representation_size, num_classes)
         self.bbox_pred = nn.Linear(representation_size, num_classes * 4)
         # =================================================
-        self.bbox_orien = nn.Linear(representation_size,  2)
+        self.bbox_orien = nn.Linear(representation_size,  1)
         # print(representation_size,num_classes,'===================================================================')
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
@@ -51,12 +52,15 @@ class FPNPredictor(nn.Module):
 
     def forward(self, x):
         scores = self.cls_score(x)
-        bbox_deltas = self.bbox_pred(x)
+        a=self.bbox_pred(x)
+        b=self.bbox_orien(x)
+        # print(a.size(), b.size(), '===============')
+        bbox_deltas = torch.cat((a,b),1)
+        # orien=torch.zeros_like(b)
         # print(scores, '=========', bbox_deltas, '=========')
         # ====================================
-        bbox_orien = self.bbox_orien(x)
         # print(bbox_orien.size(),'====',scores.size(),bbox_deltas.size(),'==============')
-        return scores, bbox_deltas, bbox_orien
+        return scores, bbox_deltas#,orien
 
 
 _ROI_BOX_PREDICTOR = {

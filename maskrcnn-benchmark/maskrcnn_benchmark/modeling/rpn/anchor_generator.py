@@ -38,11 +38,11 @@ class AnchorGenerator(nn.Module):
     """
 
     def __init__(
-        self,
-        sizes=(128, 256, 512),
-        aspect_ratios=(0.5, 1.0, 2.0),
-        anchor_strides=(8, 16, 32),
-        straddle_thresh=0,
+            self,
+            sizes=(128, 256, 512),
+            aspect_ratios=(0.5, 1.0, 2.0),
+            anchor_strides=(8, 16, 32),
+            straddle_thresh=0,
     ):
         super(AnchorGenerator, self).__init__()
 
@@ -68,7 +68,7 @@ class AnchorGenerator(nn.Module):
     def grid_anchors(self, grid_sizes):
         anchors = []
         for size, stride, base_anchors in zip(
-            grid_sizes, self.strides, self.cell_anchors
+                grid_sizes, self.strides, self.cell_anchors
         ):
             grid_height, grid_width = size
             device = base_anchors.device
@@ -81,10 +81,11 @@ class AnchorGenerator(nn.Module):
             shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
             shift_x = shift_x.reshape(-1)
             shift_y = shift_y.reshape(-1)
-            shifts = torch.stack((shift_x, shift_y, shift_x, shift_y), dim=1)
+            orien = torch.zeros_like(shift_x)
+            shifts = torch.stack((shift_x, shift_y, shift_x, shift_y, orien), dim=1)
 
             anchors.append(
-                (shifts.view(-1, 1, 4) + base_anchors.view(1, -1, 4)).reshape(-1, 4)
+                (shifts.view(-1, 1, 5) + base_anchors.view(1, -1, 5)).reshape(-1, 5)
             )
 
         return anchors
@@ -94,10 +95,10 @@ class AnchorGenerator(nn.Module):
         anchors = boxlist.bbox
         if self.straddle_thresh >= 0:
             inds_inside = (
-                (anchors[..., 0] >= -self.straddle_thresh)
-                & (anchors[..., 1] >= -self.straddle_thresh)
-                & (anchors[..., 2] < image_width + self.straddle_thresh)
-                & (anchors[..., 3] < image_height + self.straddle_thresh)
+                    (anchors[..., 0] >= -self.straddle_thresh)
+                    & (anchors[..., 1] >= -self.straddle_thresh)
+                    & (anchors[..., 2] < image_width + self.straddle_thresh)
+                    & (anchors[..., 3] < image_height + self.straddle_thresh)
             )
         else:
             device = anchors.device
@@ -191,7 +192,7 @@ def make_anchor_generator(config):
 
 
 def generate_anchors(
-    stride=16, sizes=(32, 64, 128, 256, 512), aspect_ratios=(0.5, 1, 2)
+        stride=16, sizes=(32, 64, 128, 256, 512), aspect_ratios=(0.5, 1, 2)
 ):
     """Generates a matrix of anchor boxes in (x1, y1, x2, y2) format. Anchors
     are centered on stride / 2, have (approximate) sqrt areas of the specified
@@ -208,7 +209,7 @@ def _generate_anchors(base_size, scales, aspect_ratios):
     """Generate anchor (reference) windows by enumerating aspect ratios X
     scales wrt a reference (0, 0, base_size - 1, base_size - 1) window.
     """
-    anchor = np.array([1, 1, base_size, base_size], dtype=np.float) - 1
+    anchor = np.array([1, 1, base_size, base_size, 0], dtype=np.float) - 1
     anchors = _ratio_enum(anchor, aspect_ratios)
     anchors = np.vstack(
         [_scale_enum(anchors[i, :], scales) for i in range(anchors.shape[0])]
@@ -231,12 +232,14 @@ def _mkanchors(ws, hs, x_ctr, y_ctr):
     """
     ws = ws[:, np.newaxis]
     hs = hs[:, np.newaxis]
+    orien=np.zeros_like(x_ctr - 0.5 * (ws - 1))
     anchors = np.hstack(
         (
             x_ctr - 0.5 * (ws - 1),
             y_ctr - 0.5 * (hs - 1),
             x_ctr + 0.5 * (ws - 1),
             y_ctr + 0.5 * (hs - 1),
+            orien
         )
     )
     return anchors

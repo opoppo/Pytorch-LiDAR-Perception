@@ -41,7 +41,7 @@ class RPNLossComputation(object):
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
-        target = target.copy_with_fields(['rotations'])
+        target = target.copy_with_fields([])
         # get the targets corresponding GT for each anchor
         # NB: need to clamp the indices because we can have a single
         # GT in the image, and matched_idxs can be -2, which goes
@@ -53,7 +53,7 @@ class RPNLossComputation(object):
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []
-        orien_targets = []
+        # orien_targets = []
         for anchors_per_image, targets_per_image in zip(anchors, targets):
             # print(len(anchors_per_image), len(targets_per_image), '===============prepare====================')
             matched_targets = self.match_targets_to_anchors(
@@ -75,16 +75,16 @@ class RPNLossComputation(object):
                 matched_targets.bbox, anchors_per_image.bbox
             )
             # compute orientation targets=======================================
-            orien_targets_per_image = matched_targets.get_field("rotations")
+            # orien_targets_per_image = matched_targets.get_field("rotations")
             # orien_targets_per_image = orien_targets_per_image.to(dtype=torch.int64)
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
-            orien_targets.append(orien_targets_per_image)
+            # orien_targets.append(orien_targets_per_image)
 
-        return labels, regression_targets, orien_targets
+        return labels, regression_targets#, orien_targets
 
-    def __call__(self, anchors, objectness, box_regression, box_orien, targets):
+    def __call__(self, anchors, objectness, box_regression, targets):
         """
         Arguments:
             anchors (list[BoxList])
@@ -120,7 +120,7 @@ class RPNLossComputation(object):
         # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
-        labels, regression_targets, orien_targets = self.prepare_targets(anchors, targets)
+        labels, regression_targets = self.prepare_targets(anchors, targets)
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
         sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)
@@ -129,13 +129,13 @@ class RPNLossComputation(object):
 
         objectness_flattened = []
         box_regression_flattened = []
-        box_orien_flattened = []
+        # box_orien_flattened = []
         # for each feature level, permute the outputs to make them be in the
         # same format as the labels. Note that the labels are computed for
         # all feature levels concatenated, so we keep the same representation
         # for the objectness and the box_regression
-        for objectness_per_level, box_regression_per_level, box_orien_per_level in zip(
-                objectness, box_regression, box_orien
+        for objectness_per_level, box_regression_per_level in zip(
+                objectness, box_regression
         ):
             N, A, H, W = objectness_per_level.shape
             # print(box_orien_per_level.shape)
@@ -143,33 +143,34 @@ class RPNLossComputation(object):
                 N, -1
             )
 
-            box_regression_per_level = box_regression_per_level.view(N, -1, 4, H, W)
+            box_regression_per_level = box_regression_per_level.view(N, -1, 5, H, W)
             box_regression_per_level = box_regression_per_level.permute(0, 3, 4, 1, 2)
-            box_regression_per_level = box_regression_per_level.reshape(N, -1, 4)
-            box_orien_per_level = box_orien_per_level.view(N, -1, 2, H, W)
-            box_orien_per_level = box_orien_per_level.permute(0, 3, 4, 1, 2)
-            box_orien_per_level = box_orien_per_level.reshape(N, -1, 2)
+            box_regression_per_level = box_regression_per_level.reshape(N, -1, 5)
+            # box_orien_per_level = box_orien_per_level.view(N, -1, 2, H, W)
+            # box_orien_per_level = box_orien_per_level.permute(0, 3, 4, 1, 2)
+            # box_orien_per_level = box_orien_per_level.reshape(N, -1, 2)
             # print(box_regression_per_level.shape)
             # print(box_orien_per_level.shape,'========================')
             objectness_flattened.append(objectness_per_level)
             box_regression_flattened.append(box_regression_per_level)
-            box_orien_flattened.append(box_orien_per_level)
+            # box_orien_flattened.append(box_orien_per_level)
         # concatenate on the first dimension (representing the feature levels), to
         # take into account the way the labels were generated (with all feature maps
         # being concatenated as well)
         objectness = cat(objectness_flattened, dim=1).reshape(-1)
-        box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 4)
-        orien_regression = cat(box_orien_flattened, dim=1).reshape(-1, 2)
+        box_regression = cat(box_regression_flattened, dim=1).reshape(-1, 5)
+        # orien_regression = cat(box_orien_flattened, dim=1).reshape(-1, 2)
 
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
-        orien_targets = torch.cat(orien_targets, dim=0)
+        # orien_targets = torch.cat(orien_targets, dim=0)
 
         # to_rotated_boxes(regression_targets[sampled_pos_inds],
         #                  orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor))
 
-        # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
-
+        # # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
+        # print(            box_regression[sampled_pos_inds]-
+        #     regression_targets[sampled_pos_inds],'==================')
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds],
             regression_targets[sampled_pos_inds],
@@ -180,8 +181,8 @@ class RPNLossComputation(object):
         objectness_loss = F.binary_cross_entropy_with_logits(
             objectness[sampled_inds], labels[sampled_inds]
         )
-        # print(orien_targets[sampled_pos_inds], '=========orien===========')
-        # print(orien_regression[sampled_pos_inds], '=========regression===========\n')
+        # print(regression_targets[sampled_pos_inds], '=========target===========')
+        # print(box_regression[sampled_pos_inds], '=========regression===========\n')
 
         # orien_loss = F.mse_loss(
         #     orien_regression[sampled_pos_inds],
@@ -200,33 +201,33 @@ class RPNLossComputation(object):
 
         # print(orien_loss)
 
-        return objectness_loss, box_loss, 0#orien_loss
+        return objectness_loss, box_loss#orien_loss
 
 
-def to_rotated_boxes(boxes, oriens):
-    boxes_with_oriens = torch.cat((boxes, oriens), dim=-1)
-    # print(boxes)
-    for j, boxnorien in enumerate(boxes_with_oriens):
-
-        # boxnorien = boxnorien.squeeze_()
-        alpha = torch.atan2(boxnorien[:][-2], boxnorien[:][-1]) * 180 / 3.1415926
-        # alpha = alpha.squeeze_()
-        # print(alpha,anntype,'====')
-        # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
-        top_left, bottom_right = boxnorien[:2], boxnorien[2:4]
-        l = bottom_right[1] - top_left[1]
-        w = bottom_right[0] - top_left[0]
-        xc = (top_left[0] + bottom_right[0]) / 2
-        yc = (top_left[1] + bottom_right[1]) / 2
-        # print(alpha,top_left,bottom_right,'=====')
-        if l * w <= 1:
-            continue
-
-        box = bBox_2D(l, w, xc, yc, alpha)
-        box.bBoxCalcVertxex()
-        print(boxes.size(), oriens.size(), boxnorien.size())
-        # boxes[j]=torch.
-        return
+# def to_rotated_boxes(boxes, oriens):
+#     boxes_with_oriens = torch.cat((boxes, oriens), dim=-1)
+#     # print(boxes)
+#     for j, boxnorien in enumerate(boxes_with_oriens):
+#
+#         # boxnorien = boxnorien.squeeze_()
+#         alpha = torch.atan2(boxnorien[:][-2], boxnorien[:][-1]) * 180 / 3.1415926
+#         # alpha = alpha.squeeze_()
+#         # print(alpha,anntype,'====')
+#         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
+#         top_left, bottom_right = boxnorien[:2], boxnorien[2:4]
+#         l = bottom_right[1] - top_left[1]
+#         w = bottom_right[0] - top_left[0]
+#         xc = (top_left[0] + bottom_right[0]) / 2
+#         yc = (top_left[1] + bottom_right[1]) / 2
+#         # print(alpha,top_left,bottom_right,'=====')
+#         if l * w <= 1:
+#             continue
+#
+#         box = bBox_2D(l, w, xc, yc, alpha)
+#         box.bBoxCalcVertxex()
+#         print(boxes.size(), oriens.size(), boxnorien.size())
+#         # boxes[j]=torch.
+#         return
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):

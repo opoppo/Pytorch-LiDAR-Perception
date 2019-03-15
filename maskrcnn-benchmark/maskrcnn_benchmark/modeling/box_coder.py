@@ -34,13 +34,15 @@ class BoxCoder(object):
         ex_heights = proposals[:, 3] - proposals[:, 1] + TO_REMOVE
         ex_ctr_x = proposals[:, 0] + 0.5 * ex_widths
         ex_ctr_y = proposals[:, 1] + 0.5 * ex_heights
+        ex_orien = proposals[:, 4]
 
         gt_widths = reference_boxes[:, 2] - reference_boxes[:, 0] + TO_REMOVE
         gt_heights = reference_boxes[:, 3] - reference_boxes[:, 1] + TO_REMOVE
         gt_ctr_x = reference_boxes[:, 0] + 0.5 * gt_widths
         gt_ctr_y = reference_boxes[:, 1] + 0.5 * gt_heights
+        gt_orien = reference_boxes[:, 4]
 
-        wx, wy, ww, wh = self.weights
+        wx, wy, ww, wh, wo = self.weights
         # print(self.weights,'=======weight')
         targets_dx = wx * (gt_ctr_x - ex_ctr_x) / (ex_widths)
         targets_dy = wy * (gt_ctr_y - ex_ctr_y) / (ex_heights)
@@ -48,8 +50,9 @@ class BoxCoder(object):
         # targets_dh = wh * (gt_heights - ex_heights) / (ex_heights)
         targets_dw = ww * torch.log(gt_widths / ex_widths)
         targets_dh = wh * torch.log(gt_heights / ex_heights)
+        targets_do = wo * torch.sin(ex_orien - gt_orien)
 
-        targets = torch.stack((targets_dx, targets_dy, targets_dw, targets_dh), dim=1)
+        targets = torch.stack((targets_dx, targets_dy, targets_dw, targets_dh, targets_do), dim=1)
         return targets
 
     def decode(self, rel_codes, boxes):
@@ -69,12 +72,14 @@ class BoxCoder(object):
         heights = boxes[:, 3] - boxes[:, 1] + TO_REMOVE
         ctr_x = boxes[:, 0] + 0.5 * widths
         ctr_y = boxes[:, 1] + 0.5 * heights
+        oriens = boxes[:, 4]
 
-        wx, wy, ww, wh = self.weights
-        dx = rel_codes[:, 0::4] / wx
-        dy = rel_codes[:, 1::4] / wy
-        dw = rel_codes[:, 2::4] / ww
-        dh = rel_codes[:, 3::4] / wh
+        wx, wy, ww, wh, wo = self.weights
+        dx = rel_codes[:, 0::5] / wx
+        dy = rel_codes[:, 1::5] / wy
+        dw = rel_codes[:, 2::5] / ww
+        dh = rel_codes[:, 3::5] / wh
+        do = rel_codes[:, 4::5] / wo
 
         # Prevent sending too large values into torch.exp()
         dw = torch.clamp(dw, max=self.bbox_xform_clip)
@@ -86,15 +91,18 @@ class BoxCoder(object):
         # pred_h = dh * heights[:, None] + heights[:, None]
         pred_w = torch.exp(dw) * widths[:, None]
         pred_h = torch.exp(dh) * heights[:, None]
+        pred_o = torch.asin(do) + oriens[:, None]
 
         pred_boxes = torch.zeros_like(rel_codes)
         # x1
-        pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * pred_w
+        pred_boxes[:, 0::5] = pred_ctr_x - 0.5 * pred_w
         # y1
-        pred_boxes[:, 1::4] = pred_ctr_y - 0.5 * pred_h
+        pred_boxes[:, 1::5] = pred_ctr_y - 0.5 * pred_h
         # x2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * pred_w - 1
+        pred_boxes[:, 2::5] = pred_ctr_x + 0.5 * pred_w - 1
         # y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h - 1
+        pred_boxes[:, 3::5] = pred_ctr_y + 0.5 * pred_h - 1
+
+        pred_boxes[:, 4::5] = pred_o
 
         return pred_boxes

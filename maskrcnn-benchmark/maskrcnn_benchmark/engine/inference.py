@@ -164,24 +164,24 @@ def overlay_boxes(image, predictions, anntype):
             It should contain the field `labels`.
     """
     # labels = predictions.get_field("labels")
-    oriens = predictions.get_field("rotations")
+    # oriens = predictions.get_field("rotations")
     boxes = predictions.bbox
     xclist = []
     yclist = []
 
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
-    for box, orien in zip(boxes, oriens):
+    for box in boxes:
 
         color = {'targets': (155, 255, 255), 'output': (155, 255, 55)}
         offset = {'targets': 2, 'output': 0}
 
+        alpha = (box[4]) * 180 / 3.1415926
         box = box.squeeze_().detach().cpu().numpy()
-        alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / 3.1415926
         alpha = alpha.squeeze_().detach().cpu().numpy()
         # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
-        top_left, bottom_right = box[:2], box[2:]
+        top_left, bottom_right = box[:2], box[2:4]
         l = bottom_right[1] - top_left[1]
         w = bottom_right[0] - top_left[0]
         xc = (top_left[0] + bottom_right[0]) / 2

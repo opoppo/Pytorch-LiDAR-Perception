@@ -20,9 +20,10 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 _C.MODEL = CN()
-_C.MODEL.RPN_ONLY = False
+_C.MODEL.RPN_ONLY = True
 _C.MODEL.MASK_ON = False
 _C.MODEL.DEVICE = "cuda"
+# _C.MODEL.DEVICE = "cpu"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
@@ -147,7 +148,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 10.,10.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 10.,10.,3.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
