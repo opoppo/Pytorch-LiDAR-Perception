@@ -75,7 +75,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         rotations = [obj["rotation"] * 3.1415926 / 180 for obj in anno]
         # print(rotations,'====')
         rotations = torch.tensor(rotations)
-        rotations = torch.stack((torch.sin(rotations), torch.cos(rotations)))  # COMPLEX space
+        rotations = torch.stack((5*torch.sin(rotations), 5*torch.cos(rotations)))  # COMPLEX space   *5 is radius of unit circle or weight
+        # rotations = torch.stack()
         rotations = torch.transpose(rotations, dim0=0, dim1=-1)  # N*2 shape
         # print(rotations)
         target.add_field("rotations", rotations)

@@ -45,20 +45,20 @@ def compute_on_dataset(model, data_loader, device):
 
         del x
         for j, (im, tar, out) in enumerate(zip(images, targets, output)):
-            outcenter = overlay_boxes(im, out, 'output')
-            tarcenter = overlay_boxes(im, tar, 'targets')
+            outcenter, outalpha = overlay_boxes(im, out, 'output')
+            tarcenter, taralpha = overlay_boxes(im, tar, 'targets')
             m, n = outcenter.shape
             o, p = tarcenter.shape
-            if p == 0:
-                continue
             outcenterlist += n
             tarcenterlist += p
+            if p == 0:
+                continue
             if n == 0:
                 continue
             D = np.zeros([n, p])
-            for i in range(n):
+            for q in range(n):
                 for j in range(p):
-                    D[i, j] = la.norm(outcenter[:, i] - tarcenter[:, j])  # distance matrix
+                    D[q, j] = la.norm(outcenter[:, q] - tarcenter[:, j])  # distance matrix
             for ii in range(p):
                 eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
             # print(out.shape)
@@ -70,13 +70,18 @@ def compute_on_dataset(model, data_loader, device):
             # os.mkdir('./result')
 
             cv2.imwrite('./result/%d.jpg' % i, im)
-
+            pass
             # print('imwritten%d'%i)
             # k=cv2.waitKey()
             # if k == 27:  # Esc for exiting
             #     cv2.destroyAllWindows()
             #     os._exit(1)
-    print(eval_distance.__len__(), sum(np.array(eval_distance) < 0.35 * 18), outcenterlist, tarcenterlist, '+++++++')
+    tarnumfiltered = eval_distance.__len__()
+    predinrange = sum(np.array(eval_distance) < 0.35 * 18)
+    prednum = outcenterlist
+    tarnumraw = tarcenterlist
+    print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++')
+    print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumfiltered))
     return results_dict
 
 
@@ -168,6 +173,7 @@ def overlay_boxes(image, predictions, anntype):
     boxes = predictions.bbox
     xclist = []
     yclist = []
+    alphalist = []
 
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
@@ -188,11 +194,12 @@ def overlay_boxes(image, predictions, anntype):
         yc = (top_left[1] + bottom_right[1]) / 2
         xclist.append(xc)
         yclist.append(yc)
+        alphalist.append(alpha)
 
         if l * w <= 1:
             continue
 
-        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype],  alpha)
+        box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
         box.bBoxCalcVertxex()
 
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
@@ -201,4 +208,4 @@ def overlay_boxes(image, predictions, anntype):
         cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
         # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====',l*w,'\t',l,'\t',w)
 
-    return np.array([xclist, yclist], dtype=float)
+    return np.array([xclist, yclist], dtype=float), np.array(alphalist, dtype=float)
