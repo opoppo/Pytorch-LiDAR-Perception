@@ -183,13 +183,13 @@ class RPNLossComputation(object):
         # print(orien_targets[sampled_pos_inds], '=========orien===========')
         # print(orien_regression[sampled_pos_inds], '=========regression===========\n')
 
-        # orien_loss = F.mse_loss(
-        #     orien_regression[sampled_pos_inds],
-        #     orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
-        #     reduction='sum',
-        #     # size_average=False,
-        #     # beta=1,
-        # ) / sampled_inds.numel()
+        orien_loss = F.mse_loss(
+            orien_regression[sampled_pos_inds],
+            orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+            reduction='sum',
+            # size_average=False,
+            # beta=1,
+        ) / sampled_inds.numel()
 
         # orien_loss = smooth_l1_loss(
         #     orien_regression[sampled_pos_inds],
@@ -200,7 +200,7 @@ class RPNLossComputation(object):
 
         # print(orien_loss)
 
-        return objectness_loss, box_loss, 0#orien_loss
+        return objectness_loss, box_loss, orien_loss
 
 
 def to_rotated_boxes(boxes, oriens):
