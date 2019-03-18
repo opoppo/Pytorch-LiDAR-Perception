@@ -1,7 +1,6 @@
 import os
 # import pcl
 import numpy as np
-import torch
 import cv2
 import math
 from bBox_2D import bBox_2D
@@ -18,13 +17,18 @@ resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization
 # ==============================
 
 # Cloud data to images
+_pixel_enhance = np.array([-1, 0, 1])
+pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
     for dot in scan:
         if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:
-            emptyImage[int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)] = (
+            x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
+            enhanced = [[x, y] + e for e in pixel_enhance]
+            emptyImage[enhanced] = (
                 int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
                 int(dot[1] * 75 / 15 + 80))
+
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
@@ -59,25 +63,25 @@ for i, scan in enumerate(cloudata):
     img.append(outImage)
 
 # Flipping
-augmentimg = []
-for i, im in enumerate(img):
-    imflipped = cv2.flip(im, 1)
-    augmentimg.append(imflipped)
-img = img + augmentimg
-del augmentimg
-
-augmentann = np.zeros(anndata.shape, dtype=np.float)
-for i, scan in enumerate(anndata):
-    for j, label in enumerate(scan):
-        if label[0]==0:
-            continue
-        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-        box.flipx(axis=int(resolution / 2))
-        augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
-anndata = np.concatenate((anndata, augmentann))
-del augmentann
-
-# Adding noise : rotate, translate(x,y), resize
+# augmentimg = []
+# for i, im in enumerate(img):
+#     imflipped = cv2.flip(im, 1)
+#     augmentimg.append(imflipped)
+# img = img + augmentimg
+# del augmentimg
+#
+# augmentann = np.zeros(anndata.shape, dtype=np.float)
+# for i, scan in enumerate(anndata):
+#     for j, label in enumerate(scan):
+#         if label[0]==0:
+#             continue
+#         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
+#         box.flipx(axis=int(resolution / 2))
+#         augmentann[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+# anndata = np.concatenate((anndata, augmentann))
+# del augmentann
+#
+# # Adding noise : rotate, translate(x,y), resize
 # print('Adding Noise...')
 # augmentann = np.zeros(anndata.shape, dtype=np.float)
 # for i, scan in enumerate(anndata):
@@ -94,7 +98,7 @@ del augmentann
 # anndata = np.concatenate((anndata, augmentann))
 # del augmentann
 # img = img + img
-#
+# #
 ll = len(img)
 
 print(cloudata.shape, '\t', anndata.shape, '\t', ll)
@@ -134,7 +138,7 @@ for i, im in enumerate(img):
         "id": i
     }
     images.append(iminfo)
-print(pixel_mean / ll, '==pixel_mean==',pixel_std/ll,'==pixel_std==')
+print(pixel_mean / ll, '==pixel_mean==', pixel_std / ll, '==pixel_std==')
 
 idcount = 0
 for j, ann in enumerate(anndata):
@@ -142,7 +146,7 @@ for j, ann in enumerate(anndata):
     for i, label in enumerate(ann):
         if label[0] == 0:
             continue
-        if label[0]<5 or label[1]<5:      # filter small bbox
+        if label[0] < 5 or label[1] < 5:  # filter small bbox
             continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.xcyc2topleft()
@@ -169,7 +173,10 @@ catinfo = {
     "name": "car"}
 categories.append(catinfo)
 
-imagetrain = (images.copy())[:trainsplit]
+random.shuffle(images)
+
+# trainset
+imagetrain = images[:trainsplit]
 imids = set(im['id'] for im in imagetrain)
 annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
              annotations)  # get binary inds and ids of ann according to im
@@ -182,7 +189,8 @@ trainann_json = {'info': {}, 'images': imagetrain, 'annotations': anntrain, 'cat
 with open("./maskrcnn-benchmark/datasets/coco/annotations/trainann.json", 'w', encoding='utf-8') as json_file:
     json.dump(trainann_json, json_file, ensure_ascii=False)
 
-imageval = (images.copy())[trainsplit:valsplit]
+# valset
+imageval = images[trainsplit:valsplit]
 imids = set(im['id'] for im in imageval)
 annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
              annotations)  # get binary inds and ids of ann according to im
@@ -195,7 +203,8 @@ valann_json = {'info': {}, 'images': imageval, 'annotations': annval, 'categorie
 with open("./maskrcnn-benchmark/datasets/coco/annotations/valann.json", 'w', encoding='utf-8') as json_file:
     json.dump(valann_json, json_file, ensure_ascii=False)
 
-imagetest = (images.copy())[valsplit:]
+# testset
+imagetest = images[valsplit:]
 imids = set(im['id'] for im in imagetest)
 annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
              annotations)  # get binary inds and ids of ann according to im
@@ -208,7 +217,8 @@ testann_json = {'info': {}, 'images': imagetest, 'annotations': anntest, 'catego
 with open("./maskrcnn-benchmark/datasets/coco/annotations/testann.json", 'w', encoding='utf-8') as json_file:
     json.dump(testann_json, json_file, ensure_ascii=False)
 
-imageoverfit = (images.copy())[:overfittest]
+# overfitset
+imageoverfit = images[:overfittest]
 imids = set(im['id'] for im in imageoverfit)
 annids = set(ann['id'] if ann['image_id'] in imids else None for ann in
              annotations)  # get binary inds and ids of ann according to im
@@ -220,10 +230,11 @@ for ann in annotations:
 overfitann_json = {'info': {}, 'images': imageoverfit, 'annotations': annoverfit, 'categories': categories}
 with open("./maskrcnn-benchmark/datasets/coco/annotations/overfit.json", 'w', encoding='utf-8') as json_file:
     json.dump(overfitann_json, json_file, ensure_ascii=False)
-#
+
+# summary
 print(mwidth / idcount, mlength / idcount, marea / idcount, mrotation / idcount)
-# # 12.588   5.719   131.970   0.0
-#
+#  12.588   5.719   131.970   0.0
+
 
 for im in overfitann_json['images']:
     shutil.copyfile('./maskrcnn-benchmark/datasets/coco/train2014/' + im["file_name"],

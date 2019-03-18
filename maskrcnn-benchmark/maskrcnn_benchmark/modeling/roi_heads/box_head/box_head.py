@@ -7,7 +7,6 @@ from .roi_box_predictors import make_roi_box_predictor
 from .inference import make_roi_box_post_processor
 from .loss import make_roi_box_loss_evaluator
 
-
 class ROIBoxHead(torch.nn.Module):
     """
     Generic Box Head class.
@@ -47,15 +46,15 @@ class ROIBoxHead(torch.nn.Module):
         x = self.feature_extractor(features, proposals)
         # print(x.size(), '=============================')
         # final classifier that converts the features into predictions
-#====================================================
-        class_logits, box_regression,box_orien = self.predictor(x)
+        # ====================================================
+        class_logits, box_regression, box_orien = self.predictor(x)
         # print(class_logits,box_regression,box_orien,'===========')
         if not self.training:
-            result = self.post_processor((class_logits, box_regression,box_orien), proposals)
+            result = self.post_processor((class_logits, box_regression, box_orien), proposals)
             return x, result, {}
-#========================================================
-        loss_classifier, loss_box_reg,loss_box_orien = self.loss_evaluator(
-            [class_logits], [box_regression],[box_orien]
+        # ========================================================
+        loss_classifier, loss_box_reg, loss_box_orien = self.loss_evaluator(
+            [class_logits], [box_regression], [box_orien]
         )
         return (
             x,

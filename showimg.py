@@ -1,46 +1,71 @@
 import numpy as np
 import cv2
 from bBox_2D import bBox_2D
-import torch
 import os
+import math
+import time
 
-img = np.load('./testset/img.npy')
-anndata = np.load('./testset/anndatafixed.npy')
+cloudata = np.load('./testset/cloudata.npy')
+anndata = np.load('./testset/anndata.npy')
+img = []
 
-# # noise to rotate, translate(x,y), resize
-# print('Adding Noise...')
-# for i, scan in enumerate(anndata):
-#     for j, label in enumerate(scan):
-#         noiseratio = ((torch.randn(2)).div_(20)).exp_()
-#         noiseoffset = (torch.randn(2))
-#         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-#         box.rotate(noiseratio[0])
-#         box.resize(noiseratio[1])
-#         box.translate(noiseoffset[0], noiseoffset[1])
-#         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+# ==============================
+resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
+# ==============================
+keep = [ii for ii in range(len(cloudata))]
+discard = []  # index for frames
 
-for i, im in enumerate(img):
-    # emptyImage = cv2.resize(im, (200, 200), interpolation=cv2.INTER_CUBIC)
-    # print(im.shape)
-    emptyImage = cv2.resize(im, (1000, 1000), interpolation=cv2.INTER_CUBIC)
-    outImage = cv2.flip(emptyImage, 1)
-    del im
+# Cloud data to images
+_pixel_enhance = np.array([-1, 0, 1])
+pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
+for i, scan in enumerate(cloudata):
+    emptyImage = np.zeros([200, 200, 3], np.uint8)
+    for dot in scan:
+        if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:
+            x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
+            enhanced = [[x, y] + e for e in pixel_enhance]
+            emptyImage[enhanced] = (
+                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
+                int(dot[1] * 75 / 15 + 80))
+
+    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+
     for j, label in enumerate(anndata[i]):
-        box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
-        # box.Scale(299 / 200, 0, 0)  #==========!!!
-        box.scale(1000 / 224, 0, 0)
-        box.flipx(axis=500)
-        # box.scale(224 / 200, 0, 0)  # ===== !!!
-        box.bBoxCalcVertxex()
+        if label[0] < label[1] and (label[4] == -90 or label[4] == 0 or label[4] == 90 or label[4] == -180):
+            box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # fix annotations!!!
+        else:
+            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
 
+        # print(box.xc,box.yc)
+        if box.xc == 0 and box.yc == 0 and box.length == 0 and box.width == 0:
+            anndata[i][j] = [0, 0, 0, 0, 0]  # mark with 0
+            continue
+        # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
+        box.scale(300 / 50, 100, 20)
+        box.scale(resolution / 200, 0, 0)
+
+        anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
+
+        box.bBoxCalcVertxex()
         cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
         cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-
+        print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width, ' a ', box.alpha)
     cv2.imshow('scan', outImage)
+    print(i)
     k = cv2.waitKey()
-
     if k == 27:  # Esc for exiting
         cv2.destroyAllWindows()
         os._exit(1)
+
+    if k == '0':  # num 0 to discard this frame
+        discard.append(i)
+
+for ii in discard:
+    keep.remove(ii)
+cloudata_filtered = np.array(cloudata[keep])
+anndata_filtered = np.array(anndata[keep])
+
+np.save('./testset/cloudata%f' % time.time(), cloudata_filtered)
+np.save('./testset/anndata%f' % time.time(), anndata_filtered)

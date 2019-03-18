@@ -81,7 +81,7 @@ def compute_on_dataset(model, data_loader, device):
     prednum = outcenterlist
     tarnumraw = tarcenterlist
     print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++')
-    print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumfiltered))
+    print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumraw))
     return results_dict
 
 
