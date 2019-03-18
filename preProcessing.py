@@ -25,9 +25,11 @@ for i, scan in enumerate(cloudata):
         if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:
             x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
             enhanced = [[x, y] + e for e in pixel_enhance]
-            emptyImage[enhanced] = (
-                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
-                int(dot[1] * 75 / 15 + 80))
+            for e in enhanced:
+                if e[0]<200 and 0<=e[0] and e[1]<200 and 0<=e[0]:
+                    emptyImage[e[0],e[1]] =  (
+                        int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
+                        int(dot[1] * 75 / 15 + 80))
 
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 

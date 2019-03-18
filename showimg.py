@@ -21,12 +21,14 @@ pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
     for dot in scan:
-        if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:
+        if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:   # in range
             x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
             enhanced = [[x, y] + e for e in pixel_enhance]
-            emptyImage[enhanced] = (
-                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
-                int(dot[1] * 75 / 15 + 80))
+            for e in enhanced:
+                if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
+                    emptyImage[e[0],e[1]] =  (
+                        int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
+                        int(dot[1] * 75 / 15 + 80))
 
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
@@ -53,14 +55,16 @@ for i, scan in enumerate(cloudata):
         cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
         print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width, ' a ', box.alpha)
     cv2.imshow('scan', outImage)
-    print(i)
+    print('frame',i)
     k = cv2.waitKey()
+    # print(k,'======current key pressed=======')
     if k == 27:  # Esc for exiting
         cv2.destroyAllWindows()
         os._exit(1)
 
-    if k == '0':  # num 0 to discard this frame
+    if k == 48:  # num 0 to discard this frame
         discard.append(i)
+        print('frame', i, 'removed!!')
 
 for ii in discard:
     keep.remove(ii)
