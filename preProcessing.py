@@ -15,6 +15,12 @@ img = []
 # ==============================
 resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ==============================
+# ------------>   x    annotation box clock wise
+# |
+# |
+# |
+# y
+# ==============================
 
 # Cloud data to images
 _pixel_enhance = np.array([-1, 0, 1])
@@ -22,22 +28,22 @@ pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
     for dot in scan:
-        if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:
+        if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:  # in range
             x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
             enhanced = [[x, y] + e for e in pixel_enhance]
             for e in enhanced:
-                if e[0]<200 and 0<=e[0] and e[1]<200 and 0<=e[0]:
-                    emptyImage[e[0],e[1]] =  (
+                if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
+                    emptyImage[e[0], e[1]] = (
                         int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
                         int(dot[1] * 75 / 15 + 80))
 
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
-        if label[0] < label[1] and (label[4] == -90 or label[4] == 0 or label[4] == 90 or label[4] == -180):
-            box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # fix annotations!!!
+        if label[4] == -90 or  label[4] == 90 :
+            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!
         else:
-            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])
+            box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # clock wise
 
         # print(box.xc,box.yc)
         if box.xc == 0 and box.yc == 0 and box.length == 0 and box.width == 0:
@@ -49,7 +55,7 @@ for i, scan in enumerate(cloudata):
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
-        box.bBoxCalcVertxex()
+        # box.bBoxCalcVertxex()
         # cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
