@@ -24,11 +24,10 @@ def compute_on_dataset(model, data_loader, device):
     results_dict = {}
     cpu_device = torch.device("cpu")
     eval_distance = []
-    eval_angle=[]
+    eval_angle = []
     outcenterlist = 0
     tarcenterlist = 0
-    outanglelist = 0
-    taranglelist = 0
+
     for i, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
         # print(targets,'============================')
@@ -66,7 +65,7 @@ def compute_on_dataset(model, data_loader, device):
                     A[q, j] = outalpha[q] - taralpha[j]
             for ii in range(p):
                 eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
-                eval_angle.append(A[np.argmin(A, axis=0)[ii]][ii])
+                eval_angle.append(A[np.argmin(D, axis=0)[ii]][ii])
             # print(out.shape)
 
             # cv2.imshow('scan', im)
@@ -83,11 +82,11 @@ def compute_on_dataset(model, data_loader, device):
             #     cv2.destroyAllWindows()
             #     os._exit(1)
     tarnumfiltered = eval_distance.__len__()
-    predinrange = sum(np.array(eval_distance) < 0.35 * 18)
-    predinangle=sum(np.array(eval_angle) < 20)
+    predinrange = sum((np.array(eval_distance) < 0.35 * 18) & (np.array(eval_angle) < 20))  # calc matched predictions
     prednum = outcenterlist
     tarnumraw = tarcenterlist
-    print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++')
+    print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 18),
+          sum(np.array(eval_angle) < 20))
     print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumraw))
     return results_dict
 

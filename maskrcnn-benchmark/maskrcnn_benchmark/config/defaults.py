@@ -139,7 +139,7 @@ _C.MODEL.RPN.RPN_HEAD = "SingleConvRPNHead"
 # ROI HEADS options
 # ---------------------------------------------------------------------------- #
 _C.MODEL.ROI_HEADS = CN()
-_C.MODEL.ROI_HEADS.USE_FPN = False
+_C.MODEL.ROI_HEADS.USE_FPN = True
 # Overlap threshold for an RoI to be considered foreground (if >= FG_IOU_THRESHOLD)
 _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 # Overlap threshold for an RoI to be considered background
@@ -167,7 +167,7 @@ _C.MODEL.ROI_HEADS.SCORE_THRESH = 0.4
 _C.MODEL.ROI_HEADS.NMS = 0.3
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 3
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 12
 
 _C.MODEL.ROI_BOX_HEAD = CN()
 _C.MODEL.ROI_BOX_HEAD.FEATURE_EXTRACTOR = "ResNet50Conv5ROIFeatureExtractor"
@@ -242,12 +242,12 @@ _C.SOLVER.WARMUP_FACTOR = 1.0 / 3
 _C.SOLVER.WARMUP_ITERS = 2000
 _C.SOLVER.WARMUP_METHOD = "linear"
 
-_C.SOLVER.CHECKPOINT_PERIOD = 600
+_C.SOLVER.CHECKPOINT_PERIOD = 2500
 
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 4
+_C.SOLVER.IMS_PER_BATCH = 8
 
 # ---------------------------------------------------------------------------- #
 # Specific test options
@@ -258,7 +258,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 1
+_C.TEST.IMS_PER_BATCH = 2
 
 # ---------------------------------------------------------------------------- #
 # Misc options

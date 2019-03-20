@@ -41,11 +41,21 @@ def get_lr(optimizer):
         return param_group['lr']
 
 
-def get_triangular_lr(iteration, stepsize, base_lr, max_lr):
+def get_triangular_lr(iteration, stepsize, base_lr, max_lr, decay_factor=0.8, decay_step=30000):
     """Given the inputs, calculates the lr that should be applicable for this iteration"""
+    if (iteration+1)%decay_step==0:
+        base_lr*=decay_factor
+        max_lr*=decay_factor
     cycle = np.floor(1 + iteration / (2 * stepsize))
     x = np.abs(iteration / stepsize - 2 * cycle + 1)
     lr = base_lr + (max_lr - base_lr) * np.maximum(0, (1 - x))
+    return lr
+
+def get_decay_lr(iteration, base_lr, decay_factor=0.8, decay_step=30000):
+    """Given the inputs, calculates the lr that should be applicable for this iteration"""
+    if (iteration+1)%decay_step==0:
+        base_lr*=decay_factor
+    lr=base_lr
     return lr
 
 
@@ -69,8 +79,9 @@ def do_train(
     end = time.time()
 
     # lambda1 = lambda epoch: 10 ** np.random.uniform(0, -3)
-    lambda1 = lambda epoch: get_triangular_lr(epoch, 300, 10 ** (-3), 10 ** (0))
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
+    lambda1 = lambda iteration: get_triangular_lr(iteration, 3000, 10 ** (-2), 10 ** (0))
+    lambda2 = lambda iteration: get_decay_lr(iteration, 10 ** (0))
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda2)
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         # for target in targets:
@@ -106,7 +117,7 @@ def do_train(
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
-        if iteration % 1 == 0 or iteration == max_iter:
+        if iteration % 20 == 0 or iteration == max_iter:
             logger.info(
                 meters.delimiter.join(
                     [
