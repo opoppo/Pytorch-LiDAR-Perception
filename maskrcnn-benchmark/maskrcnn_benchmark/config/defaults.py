@@ -94,10 +94,10 @@ _C.MODEL.RPN = CN()
 _C.MODEL.RPN.USE_FPN = True
 # Base RPN anchor sizes given in absolute pixels w.r.t. the scaled network input
 _C.MODEL.RPN.ANCHOR_SIZES = (32, 64, 128, 256, 512)
-# _C.MODEL.RPN.ANCHOR_SIZES = (14, 28, 56, 112)
+# _C.MODEL.RPN.ANCHOR_SIZES = (16, 32, 64, 128, 256)
 # Stride of the feature map that RPN is attached.
 # For FPN, number of strides should match number of scales
-_C.MODEL.RPN.ANCHOR_STRIDE = ( 8, 16, 32, 64)
+_C.MODEL.RPN.ANCHOR_STRIDE = (8, 16, 32, 64)
 # RPN anchor aspect ratios
 _C.MODEL.RPN.ASPECT_RATIOS = (0.5, 1.0, 2.0)
 # Remove RPN anchors that go outside the image by RPN_STRADDLE_THRESH pixels
@@ -147,7 +147,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5.,5.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
@@ -161,7 +161,7 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.35
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.4
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.3

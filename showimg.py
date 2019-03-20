@@ -38,7 +38,7 @@ for i, scan in enumerate(cloudata):
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
-        if label[4] == -90 or  label[4] == 90 :
+        if label[4] == -90 or label[4] == 90:
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!
         else:
             box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # clock wise
@@ -50,6 +50,11 @@ for i, scan in enumerate(cloudata):
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(300 / 50, 100, 20)
         box.scale(resolution / 200, 0, 0)
+
+        # filter bbox too small too large or too thin!! (unit in METERs)
+        if label[0] < 12/18 or label[1] < 12/18 or label[0] > 144/18 or label[1] > 144/18 or label[0] * label[1] < 360/324 or label[0] * \
+                label[1] > 13000/324:
+            continue
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
         rad = box.alpha * math.pi / 180

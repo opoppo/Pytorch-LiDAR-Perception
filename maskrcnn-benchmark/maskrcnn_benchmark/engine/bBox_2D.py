@@ -14,12 +14,19 @@ class bBox_2D(object):
         self.vertex2 = 0
         self.vertex3 = 0
         self.vertex4 = 0
+        #     x width
+        # ------
+        # |        |
+        # |        |
+        # |        |   y length
+        # |        |
+        # -------
 
     def bBoxCalcVertxex(self):
-        self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
-        self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
-        self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
-        self.vertex4 = (self.xc - self.length / 2, self.yc - self.width / 2)
+        self.vertex1 = (self.xc + self.width / 2, self.yc + self.length / 2)
+        self.vertex2 = (self.xc + self.width / 2, self.yc - self.length / 2)
+        self.vertex3 = (self.xc - self.width / 2, self.yc + self.length / 2)
+        self.vertex4 = (self.xc - self.width / 2, self.yc - self.length / 2)
 
         self.vertex1 = self._rotate(self.vertex1, self.center, self.alpha)
         self.vertex2 = self._rotate(self.vertex2, self.center, self.alpha)
@@ -45,10 +52,10 @@ class bBox_2D(object):
                     alpha * math.pi / 180) + origin[1])
 
     def rotate(self, ratio):
-        self.vertex1 = (self.xc + self.length / 2, self.yc + self.width / 2)
-        self.vertex2 = (self.xc + self.length / 2, self.yc - self.width / 2)
-        self.vertex3 = (self.xc - self.length / 2, self.yc + self.width / 2)
-        self.vertex4 = (self.xc - self.length / 2, self.yc - self.width / 2)
+        self.vertex1 = (self.xc + self.width / 2, self.yc + self.length / 2)
+        self.vertex2 = (self.xc + self.width / 2, self.yc - self.length / 2)
+        self.vertex3 = (self.xc - self.width / 2, self.yc + self.length / 2)
+        self.vertex4 = (self.xc - self.width / 2, self.yc - self.length / 2)
 
         self.vertex1 = self._rotate(self.vertex1, self.center, self.alpha * ratio)
         self.vertex2 = self._rotate(self.vertex2, self.center, self.alpha * ratio)
@@ -75,11 +82,10 @@ class bBox_2D(object):
         self.center = (self.xc, self.yc)
 
     def xcyc2topleft(self):
-        self.xtl = self.xc - self.width / 2
-        self.ytl = self.yc - self.length / 2
+        self.xtl=self.xc-self.width/2
+        self.ytl=self.yc-self.length/2
 
     def xcyc2bottomright(self):
         self.xbr = self.xc + self.width / 2
         self.ybr = self.yc + self.length / 2
-
 

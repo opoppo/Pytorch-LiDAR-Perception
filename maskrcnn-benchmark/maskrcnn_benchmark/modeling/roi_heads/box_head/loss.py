@@ -74,16 +74,19 @@ class FastRCNNLossComputation(object):
             ignore_inds = matched_idxs == Matcher.BETWEEN_THRESHOLDS
             labels_per_image[ignore_inds] = -1  # -1 is ignored by sampler
 
-            # compute regression targets
+            # compute regression targets  OFFSETs!!!
 
             regression_targets_per_image = self.box_coder.encode(
                 matched_targets.bbox, proposals_per_image.bbox
             )
+
             # for a,b,c in zip(matched_targets.bbox,proposals_per_image.bbox,regression_targets_per_image):
             #     print(a,'///\n',b,'///\n',c,'======================')
             # positive_inds = torch.nonzero(labels_per_image > 0).squeeze(1)
             # compute orientation targets=======================================
-            orien_targets_per_image = matched_targets.get_field("rotations")
+
+            orien_targets_per_image = matched_targets.get_field("rotations") - proposals_per_image.get_field(
+                "rotations")
             # orien_targets_per_image = orien_targets_per_image[positive_inds]
 
             labels.append(labels_per_image)

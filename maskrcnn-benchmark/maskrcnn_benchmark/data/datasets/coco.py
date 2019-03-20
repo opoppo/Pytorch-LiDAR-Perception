@@ -6,7 +6,16 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 
 from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
+import math
 
+
+# ==============================
+# ------------>   x    annotation box clock wise
+# |
+# |
+# |
+# y
+# ==============================
 
 class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __init__(
@@ -39,17 +48,18 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # print(len(anno),'=================anno=================  ')
         noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))      #  minimal bbox noise is better?
+        noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
         for ann in anno:
             label = ann["bbox"]
             orien = ann["rotation"]
-            box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2, orien)
+            box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2,
+                          orien)  # bBox_2D: length, width, xc, yc,alpha       label: 'bbox': [box.xtl, box.ytl, box.width, box.length],
             box.rotate(noiseratio[0])
             box.resize(noiseratio[1])
             box.translate(noiseoffset[0], noiseoffset[1])
             box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]     # slightly stretch the box may be better viewed?
-            ann["rotation"] =box.alpha
+            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]  # slightly stretch the box may be better viewed?
+            ann["rotation"] = box.alpha
 
         # filter crowd annotations
         # TODO might be better to add an extra field
@@ -72,10 +82,11 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         target.add_field("masks", masks)
 
         # ====================================
-        rotations = [obj["rotation"] * 3.1415926 / 180 for obj in anno]
+        rotations = [obj["rotation"] * math.pi / 180 for obj in anno]
         # print(rotations,'====')
         rotations = torch.tensor(rotations)
-        rotations = torch.stack((5*torch.sin(rotations), 5*torch.cos(rotations)))  # COMPLEX space   *5 is radius of unit circle or weight
+        rotations = torch.stack((5 * torch.sin(rotations), 5 * torch.cos(rotations)))
+        # COMPLEX space   *5 is radius of unit circle or weight
         # rotations = torch.stack()
         rotations = torch.transpose(rotations, dim0=0, dim1=-1)  # N*2 shape
         # print(rotations)

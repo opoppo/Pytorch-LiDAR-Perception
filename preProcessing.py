@@ -1,5 +1,6 @@
 import os
 # import pcl
+import torch
 import numpy as np
 import cv2
 import math
@@ -23,24 +24,24 @@ resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization
 # ==============================
 
 # Cloud data to images
-_pixel_enhance = np.array([-1, 0, 1])
-pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
+# _pixel_enhance = np.array([-1, 0, 1])
+# pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
     for dot in scan:
         if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:  # in range
             x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
-            enhanced = [[x, y] + e for e in pixel_enhance]
-            for e in enhanced:
-                if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
-                    emptyImage[e[0], e[1]] = (
-                        int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
-                        int(dot[1] * 75 / 15 + 80))
+            # enhanced = [[x, y] + e for e in pixel_enhance]
+            # for e in enhanced:
+            #     if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
+            emptyImage[x, y] = (
+                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
+                int(dot[1] * 75 / 15 + 80))
 
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
-        if label[4] == -90 or  label[4] == 90 :
+        if label[4] == -90 or label[4] == 90:
             box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!
         else:
             box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # clock wise
@@ -55,12 +56,16 @@ for i, scan in enumerate(cloudata):
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
+        # rad = box.alpha * math.pi / 180
         # box.bBoxCalcVertxex()
         # cv2.line(outImage, box.vertex1, box.vertex2, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex2, box.vertex4, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex3, box.vertex1, (155, 255, 255), 1, cv2.LINE_AA)
         # cv2.line(outImage, box.vertex4, box.vertex3, (155, 255, 255), 1, cv2.LINE_AA)
-        # print(' xc ',box.xc,' yc ',box.yc,' l ',box.length,' w ',box.width,' a ',box.alpha)
+        # point = int(box.xc - box.length * 0.8 * np.sin(rad)), int(box.yc + box.length * 0.8 * np.cos(rad))
+        # cv2.line(outImage, (int(box.xc), int(box.yc)),
+        #          point,
+        #          (155, 255, 255), 1, cv2.LINE_AA)
     # cv2.imshow('scan', outImage)
     print(i)
     # k=cv2.waitKey()
@@ -106,7 +111,7 @@ for i, scan in enumerate(cloudata):
 # anndata = np.concatenate((anndata, augmentann))
 # del augmentann
 # img = img + img
-# #
+# # #
 ll = len(img)
 
 print(cloudata.shape, '\t', anndata.shape, '\t', ll)
@@ -152,10 +157,15 @@ idcount = 0
 for j, ann in enumerate(anndata):
     # np.save('./testset/dataset/ann/ann%d' % j, ann)
     for i, label in enumerate(ann):
+        # remove empty
         if label[0] == 0:
             continue
-        if label[0] < 5 or label[1] < 5:  # filter small bbox
+
+        # filter bbox too small too large or too thin!! (unit in PIXELs)
+        if label[0] < 12 or label[1] < 12 or label[0] > 144 or label[1] > 144 or label[0] * label[1] < 360 or label[0] * \
+                label[1] > 13000:
             continue
+
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.xcyc2topleft()
         anninfo = {

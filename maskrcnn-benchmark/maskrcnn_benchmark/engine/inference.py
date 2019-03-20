@@ -13,7 +13,7 @@ from ..utils.comm import scatter_gather
 from ..utils.comm import synchronize
 
 import cv2
-import shutil
+import math
 from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 import numpy as np
 import numpy.linalg as la
@@ -24,8 +24,11 @@ def compute_on_dataset(model, data_loader, device):
     results_dict = {}
     cpu_device = torch.device("cpu")
     eval_distance = []
+    eval_angle=[]
     outcenterlist = 0
     tarcenterlist = 0
+    outanglelist = 0
+    taranglelist = 0
     for i, batch in enumerate(tqdm(data_loader)):
         images, targets, image_ids = batch
         # print(targets,'============================')
@@ -56,11 +59,14 @@ def compute_on_dataset(model, data_loader, device):
             if n == 0:
                 continue
             D = np.zeros([n, p])
+            A = np.zeros([n, p])
             for q in range(n):
                 for j in range(p):
                     D[q, j] = la.norm(outcenter[:, q] - tarcenter[:, j])  # distance matrix
+                    A[q, j] = outalpha[q] - taralpha[j]
             for ii in range(p):
                 eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
+                eval_angle.append(A[np.argmin(A, axis=0)[ii]][ii])
             # print(out.shape)
 
             # cv2.imshow('scan', im)
@@ -78,6 +84,7 @@ def compute_on_dataset(model, data_loader, device):
             #     os._exit(1)
     tarnumfiltered = eval_distance.__len__()
     predinrange = sum(np.array(eval_distance) < 0.35 * 18)
+    predinangle=sum(np.array(eval_angle) < 20)
     prednum = outcenterlist
     tarnumraw = tarcenterlist
     print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++')
@@ -178,12 +185,11 @@ def overlay_boxes(image, predictions, anntype):
     # print('\noriens:',oriens.size(),'boxes:',boxes.size(),'==========\n')
 
     for box, orien in zip(boxes, oriens):
-
         color = {'targets': (155, 255, 255), 'output': (155, 255, 55)}
         offset = {'targets': 2, 'output': 0}
 
         box = box.squeeze_().detach().cpu().numpy()
-        alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / 3.1415926
+        alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / math.pi
         alpha = alpha.squeeze_().detach().cpu().numpy()
         # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
@@ -196,16 +202,21 @@ def overlay_boxes(image, predictions, anntype):
         yclist.append(yc)
         alphalist.append(alpha)
 
-        if l * w <= 1:
-            continue
+        # if l * w <= 1:
+        #     continue
 
         box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
         box.bBoxCalcVertxex()
 
+        rad = box.alpha * math.pi / 180
         cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex2, box.vertex4, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex3, box.vertex1, color[anntype], 2, cv2.LINE_AA)
         cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
         # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====',l*w,'\t',l,'\t',w)
+        point = int(box.xc - box.length * 0.8 * np.sin(rad)), int(box.yc + box.length * 0.8 * np.cos(rad))
+        cv2.line(image, (int(box.xc), int(box.yc)),
+                 point,
+                 color[anntype], 1, cv2.LINE_AA)
 
     return np.array([xclist, yclist], dtype=float), np.array(alphalist, dtype=float)

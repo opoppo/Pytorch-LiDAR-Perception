@@ -37,7 +37,8 @@ class RPNLossComputation(object):
 
     def match_targets_to_anchors(self, anchor, target):
         # print(len(anchor),len(target),'==============================match=====')
-        match_quality_matrix = boxlist_iou(target, anchor, type=1)     # type=1: matching the square GT bbox  type=0: normal matching
+        match_quality_matrix = boxlist_iou(target, anchor, type=1)
+        # type=1: matching the square GT bbox  type=0: normal matching
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
@@ -118,6 +119,16 @@ class RPNLossComputation(object):
         #
         #         boxlist.bbox[j] = torch.Tensor([box.xtl, box.ytl, box.xbr, box.ybr])
         # print(box.xtl, box.ytl, box.xbr, box.ybr,'=================')
+        # square_targets = []
+        # for j, target in enumerate(targets):
+        #     wh1 = target.bbox[:, 2:] - target.bbox[:, :2]  # wh of target box1 by their br - tl
+        #     maxedge1 = torch.max(wh1[:, 0], wh1[:, 1])
+        #     maxedge11 = torch.cat((maxedge1[:, None], maxedge1[:, None]), -1)
+        #     xcyc1 = (target.bbox[:, 2:] + target.bbox[:, :2]) * 0.5
+        #
+        #     box3 = torch.cat((xcyc1 - maxedge11 * 0.5, xcyc1 + maxedge11 * 0.5), -1)
+        #     # square box3 correspond to targets
+        #     targets[j].bbox = box3
 
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
         labels, regression_targets, orien_targets = self.prepare_targets(anchors, targets)
