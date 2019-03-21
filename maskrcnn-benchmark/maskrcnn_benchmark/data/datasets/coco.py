@@ -7,6 +7,8 @@ from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
 
 from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 import math
+import numpy as np
+import random
 
 
 # ==============================
@@ -42,6 +44,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.transforms = transforms
         # print(self.ids.__len__(),'====================================',ann_file)
+        self.gtcloud = np.load('../../testset/GTpoints.npy')
+        self.gtann = np.load('../../testset/GTanns.npy')
 
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
@@ -58,7 +62,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
             box.resize(noiseratio[1])
             box.translate(noiseoffset[0], noiseoffset[1])
             box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]  # slightly stretch the box may be better viewed?
+            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
+            # slightly stretch the box may be better viewed ?
             ann["rotation"] = box.alpha
 
         # filter crowd annotations
@@ -108,3 +113,22 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         img_id = self.id_to_img_map[index]
         img_data = self.coco.imgs[img_id]
         return img_data
+
+    def overlay_GT_on_scan(self, img, ann, cloudgt, anngt, resolution=999):
+
+        #  img and its ann (ann in pixels)
+        #  GT database of cloudgt and anngt (cloud and ann in original METERs !!!)
+        #  thus, box.resize is needed
+
+        ann_num = len(ann)
+        sampling_num = int(random.random() * (12 - ann_num))  # 12 is the max box num in this dataset
+
+        for num in range(sampling_num):
+            index = int(random.random() * len(anngt))
+            ann_sampled = anngt[index]
+            point_sampled = cloudgt[index]
+            box = bBox_2D(ann_sampled.bbox[3], ann_sampled.bbox[2], ann_sampled.bbox[0], ann_sampled.bbox[1],
+                          ann_sampled.rotation)
+            box.scale(300 / 50, 100, 20)
+            box.scale(resolution / 200, 0, 0)
+            # for dot in

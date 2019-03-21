@@ -4,10 +4,14 @@ from bBox_2D import bBox_2D
 import os
 import math
 import time
+from GroundTruthSampling import GroundTruthSampling
 
 cloudata = np.load('./testset/cloudata.npy')
 anndata = np.load('./testset/anndata.npy')
 img = []
+
+#  extract GT data for augmentation
+GroundTruthSampling(cloudata, anndata)
 
 # ==============================
 resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
@@ -21,7 +25,7 @@ keep = [ii for ii in range(len(cloudata))]
 discard = []  # index for frames
 
 # Cloud data to images
-_pixel_enhance = np.array([-1, 0, 1])
+_pixel_enhance = np.array([0])
 pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
 for i, scan in enumerate(cloudata):
     emptyImage = np.zeros([200, 200, 3], np.uint8)
@@ -50,10 +54,12 @@ for i, scan in enumerate(cloudata):
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(300 / 50, 100, 20)
         box.scale(resolution / 200, 0, 0)
+        # box.resize(1.2)
 
         # filter bbox too small too large or too thin!! (unit in METERs)
-        if label[0] < 12/18 or label[1] < 12/18 or label[0] > 144/18 or label[1] > 144/18 or label[0] * label[1] < 360/324 or label[0] * \
-                label[1] > 13000/324:
+        if label[0] < 12 / 18 or label[1] < 12 / 18 or label[0] > 144 / 18 or label[1] > 144 / 18 or label[0] * label[
+            1] < 360 / 324 or label[0] * \
+                label[1] > 13000 / 324:
             continue
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]

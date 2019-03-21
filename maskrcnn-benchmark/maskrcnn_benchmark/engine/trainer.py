@@ -41,7 +41,7 @@ def get_lr(optimizer):
         return param_group['lr']
 
 
-def get_triangular_lr(iteration, stepsize, base_lr, max_lr, decay_factor=0.8, decay_step=30000):
+def get_triangular_lr(iteration, stepsize, base_lr, max_lr, decay_factor=0.8, decay_step=10000):
     """Given the inputs, calculates the lr that should be applicable for this iteration"""
     if (iteration+1)%decay_step==0:
         base_lr*=decay_factor
@@ -51,7 +51,7 @@ def get_triangular_lr(iteration, stepsize, base_lr, max_lr, decay_factor=0.8, de
     lr = base_lr + (max_lr - base_lr) * np.maximum(0, (1 - x))
     return lr
 
-def get_decay_lr(iteration, base_lr, decay_factor=0.8, decay_step=30000):
+def get_decay_lr(iteration, base_lr, decay_factor=0.8, decay_step=10000):
     """Given the inputs, calculates the lr that should be applicable for this iteration"""
     if (iteration+1)%decay_step==0:
         base_lr*=decay_factor
