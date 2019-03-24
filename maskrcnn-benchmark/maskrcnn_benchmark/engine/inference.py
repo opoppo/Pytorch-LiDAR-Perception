@@ -208,10 +208,10 @@ def overlay_boxes(image, predictions, anntype):
         box.bBoxCalcVertxex()
 
         rad = box.alpha * math.pi / 180
-        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
-        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 2, cv2.LINE_AA)
-        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 2, cv2.LINE_AA)
-        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 1, cv2.LINE_AA)
+        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 1, cv2.LINE_AA)
+        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 1, cv2.LINE_AA)
+        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 1, cv2.LINE_AA)
         # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====',l*w,'\t',l,'\t',w)
         point = int(box.xc - box.length * 0.8 * np.sin(rad)), int(box.yc + box.length * 0.8 * np.cos(rad))
         cv2.line(image, (int(box.xc), int(box.yc)),

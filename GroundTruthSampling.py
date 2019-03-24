@@ -36,12 +36,12 @@ def GroundTruthSampling(clouddata, anndata):
             maxy = max(box.vertex1[1], box.vertex2[1], box.vertex3[1], box.vertex4[1])
             miny = min(box.vertex1[1], box.vertex2[1], box.vertex3[1], box.vertex4[1])
             for dot in scan:
-                if minx < dot[0] < maxx and miny < dot[1] < maxy:
-                    pinbox.append([dot[0], dot[1]])
+                if minx < dot[1] < maxx and miny < dot[0] < maxy:  # vertexes in meters
+                    pinbox.append([dot[1], dot[0]])  # while points in meters
             Pointset.append(np.array(pinbox))
 
             idcount += 1
 
     print(len(Pointset), len(Annset))
-    np.save('./testset/GTpoints', Pointset)
-    np.save('./testset/GTanns', Annset)
+    np.save('./testset/GTpoints', Pointset)  # meters
+    np.save('./testset/GTanns', Annset)  # meters

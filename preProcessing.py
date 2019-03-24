@@ -35,14 +35,16 @@ for i, scan in enumerate(cloudata):
             # for e in enhanced:
             #     if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
             emptyImage[x, y] = (
-                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
-                int(dot[1] * 75 / 15 + 80))
+                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
+                int(255 - (dot[0] * 235 / 30 + 20)),
+                int(dot[1] * 75 / 15 + 80)
+            )
 
     outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
         if label[4] == -90 or label[4] == 90:
-            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!
+            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!   x-y from data is reversed
         else:
             box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # clock wise
 
