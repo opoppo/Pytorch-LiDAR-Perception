@@ -66,7 +66,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
             # slightly stretch the box may be better viewed ?
             ann["rotation"] = box.alpha
 
-        img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=999)
+        # img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=999)
 
         # filter crowd annotations
         # TODO might be better to add an extra field

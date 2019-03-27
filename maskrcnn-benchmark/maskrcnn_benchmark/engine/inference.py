@@ -85,7 +85,7 @@ def compute_on_dataset(model, data_loader, device):
     predinrange = sum((np.array(eval_distance) < 0.35 * 18) & (np.array(eval_angle) < 20))  # calc matched predictions
     prednum = outcenterlist
     tarnumraw = tarcenterlist
-    print(tarnumfiltered, predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 18),
+    print(predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 18),
           sum(np.array(eval_angle) < 20))
     print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumraw))
     return results_dict

@@ -79,9 +79,9 @@ def do_train(
     end = time.time()
 
     # lambda1 = lambda epoch: 10 ** np.random.uniform(0, -3)
-    lambda1 = lambda iteration: get_triangular_lr(iteration, 3000, 10 ** (-2), 10 ** (0))
+    lambda1 = lambda iteration: get_triangular_lr(iteration, 1000, 10 ** (-1), 10 ** (-1))
     lambda2 = lambda iteration: get_decay_lr(iteration, 10 ** (0))
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda2)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         # for target in targets:

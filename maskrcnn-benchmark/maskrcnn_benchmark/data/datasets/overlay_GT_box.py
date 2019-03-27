@@ -18,7 +18,10 @@ def overlay_GT_on_scan(img, anno, cloudgt, anngt, resolution=999):
         return img, anno
 
     ann_num = len(anno)
-    sampling_num = int(random.random() * max(0, (12 - ann_num)))  # 12 is the max box num in this dataset
+    if ann_num <= 5:
+        sampling_num = int(random.random() * max(0, (5 - ann_num)))  # 12 is the max box num in this dataset
+    else:
+        return img, anno
     collision_box = False  # indicator for collision test
     collision_point = False
     _pixel_enhance = np.array([-1, 0, 1, 2])
@@ -135,7 +138,8 @@ def overlay_GT_on_scan(img, anno, cloudgt, anngt, resolution=999):
                                 # int(255 - math.hypot(dot[1], dot[0]) * 255 / 60) - 127.5,
                                 # int(255 - (dot[1] * 235 / 30 + 20)) - 127.5,
                                 # int(dot[0] * 75 / 15 + 80) - 127.5
-                                0.4235, 0.9294, 1.0000   #  ?????????  how to calculate this RGB color encoding values ????
+                                0.4235, 0.9294, 1.0000
+                                # ?????????  how to calculate this RGB color encoding values ????
                             ])
                             img[e[0], e[1]] = pp
 
