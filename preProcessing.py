@@ -14,7 +14,7 @@ anndata = np.load('./testset/anndata.npy')
 img = []
 
 # ==============================
-resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
+resolution = 1000  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ==============================
 # ------------>   x    annotation box clock wise
 # |
@@ -26,25 +26,29 @@ resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization
 # Cloud data to images
 # _pixel_enhance = np.array([-1, 0, 1])
 # pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
+_pixel_enhance = np.array([-1, 0, 1])
+pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
 for i, scan in enumerate(cloudata):
-    emptyImage = np.zeros([200, 200, 3], np.uint8)
+    emptyImage = np.zeros([1000, 1000, 3], np.uint8)
     for dot in scan:
         if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:  # in range
-            x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
-            # enhanced = [[x, y] + e for e in pixel_enhance]
-            # for e in enhanced:
-            #     if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
-            emptyImage[x, y] = (
-                int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
-                int(255 - (dot[0] * 235 / 30 + 20)),
-                int(dot[1] * 75 / 15 + 80)
-            )
+            x, y = int(dot[0] * 900 / 30 + 100), int(dot[1] * 30 + 500)
+            enhanced = [[x, y] + e for e in pixel_enhance]
+            for e in enhanced:
+                if e[0] < 1000 and 0 <= e[0] and e[1] < 1000 and 0 <= e[0]:
+                    emptyImage[e[0], e[1]] = (
+                        # int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
+                        # int(255 - (dot[0] * 235 / 30 + 20)),
+                        # int(dot[1] * 75 / 15 + 80)
+                        255, 255, 255
+                    )
 
-    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+    # outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
         if label[4] == -90 or label[4] == 90:
-            box = bBox_2D(label[1], label[0], label[3], label[2], -label[4])  # fix annotations!!!   x-y from data is reversed
+            box = bBox_2D(label[1], label[0], label[3], label[2],
+                          -label[4])  # fix annotations!!!   x-y from data is reversed
         else:
             box = bBox_2D(label[0], label[1], label[3], label[2], -label[4])  # clock wise
 
@@ -53,8 +57,8 @@ for i, scan in enumerate(cloudata):
             anndata[i][j] = [0, 0, 0, 0, 0]  # mark with 0
             continue
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
-        box.scale(300 / 50, 100, 20)
-        box.scale(resolution / 200, 0, 0)
+        box.scale(900 / 30, 500, 100)
+        # box.scale(resolution / 200, 0, 0)
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
@@ -75,7 +79,7 @@ for i, scan in enumerate(cloudata):
     #     cv2.destroyAllWindows()
     #     os._exit(1)
 
-    img.append(outImage)
+    img.append(emptyImage)
 
 # Flipping
 augmentimg = []
@@ -88,7 +92,7 @@ del augmentimg
 augmentann = np.zeros(anndata.shape, dtype=np.float)
 for i, scan in enumerate(anndata):
     for j, label in enumerate(scan):
-        if label[0]==0:
+        if label[0] == 0:
             continue
         box = bBox_2D(label[0], label[1], label[2], label[3], label[4])
         box.flipx(axis=int(resolution / 2))

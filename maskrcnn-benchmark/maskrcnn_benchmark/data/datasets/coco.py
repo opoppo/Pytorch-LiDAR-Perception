@@ -50,23 +50,23 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
-        # print(len(anno),'=================anno=================  ')
-        noiseratio = ((torch.randn(2)).div_(20)).exp_()
-        noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
+        img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=1000)
+
+        # noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
         for ann in anno:
+            noiseratio = ((torch.randn(1)).div_(20)).exp_().clamp(0.9, 1.1)
+            noiserotate = torch.randn(1).clamp(-3, 3)
             label = ann["bbox"]
             orien = ann["rotation"]
             box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2,
                           orien)  # bBox_2D: length, width, xc, yc,alpha       label: 'bbox': [box.xtl, box.ytl, box.width, box.length],
-            box.rotate(noiseratio[0])
-            box.resize(noiseratio[1])
-            box.translate(noiseoffset[0], noiseoffset[1])
+            box.rotate(noiserotate)
+            box.resize(noiseratio)
+            # box.translate(noiseoffset[0], noiseoffset[1])
             box.xcyc2topleft()
             ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
             # slightly stretch the box may be better viewed ?
             ann["rotation"] = box.alpha
-
-        # img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=999)
 
         # filter crowd annotations
         # TODO might be better to add an extra field

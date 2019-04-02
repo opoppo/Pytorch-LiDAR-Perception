@@ -14,7 +14,7 @@ img = []
 GroundTruthSampling(cloudata, anndata)
 
 # ==============================
-resolution = 999  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
+resolution = 1000  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
 # ------------>   x    annotation box clock wise
 # |
 # |
@@ -25,21 +25,25 @@ keep = [ii for ii in range(len(cloudata))]
 discard = []  # index for frames
 
 # Cloud data to images
-_pixel_enhance = np.array([0])
+_pixel_enhance = np.array([-1, 0, 1])
 pixel_enhance = np.array([[x, y] for x in _pixel_enhance for y in _pixel_enhance])  # enhance pixel by extra 8
 for i, scan in enumerate(cloudata):
-    emptyImage = np.zeros([200, 200, 3], np.uint8)
+    emptyImage = np.zeros([1000, 1000, 3], np.uint8)
     for dot in scan:
         if dot[0] < 30 and 100 / 6 > dot[1] > -100 / 6:  # in range
-            x, y = int(dot[0] * 180 / 30 + 20), int(dot[1] * 6 + 100)
+            x, y = int(dot[0] * 900 / 30 + 100), int(dot[1] * 30 + 500)
             enhanced = [[x, y] + e for e in pixel_enhance]
             for e in enhanced:
-                if e[0] < 200 and 0 <= e[0] and e[1] < 200 and 0 <= e[0]:
+                if e[0] < 1000 and 0 <= e[0] and e[1] < 1000 and 0 <= e[0]:
                     emptyImage[e[0], e[1]] = (
-                        int(255 - math.hypot(dot[0], dot[1]) * 255 / 60), int(255 - (dot[0] * 235 / 30 + 20)),
-                        int(dot[1] * 75 / 15 + 80))
+                        # int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
+                        # int(255 - (dot[0] * 235 / 30 + 20)),
+                        # int(dot[1] * 75 / 15 + 80)
+                        255, 255, 255
+                    )
 
-    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+    # outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+    outImage = emptyImage
 
     for j, label in enumerate(anndata[i]):
         if label[4] == -90 or label[4] == 90:
@@ -52,8 +56,8 @@ for i, scan in enumerate(cloudata):
             anndata[i][j] = [0, 0, 0, 0, 0]  # mark with 0
             continue
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
-        box.scale(300 / 50, 100, 20)
-        box.scale(resolution / 200, 0, 0)
+        box.scale(900 / 30, 500, 100)
+        # box.scale(resolution / 200, 0, 0)
         # box.resize(1.2)
 
         # filter bbox too small too large or too thin!! (unit in METERs)
