@@ -206,7 +206,8 @@ class FastRCNNLossComputation(object):
         # )
         orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds_subset],
-            orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+            # orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+            orien_targets[sampled_pos_inds_subset],
             reduction='sum',
             # size_average=False,
             # beta=1,

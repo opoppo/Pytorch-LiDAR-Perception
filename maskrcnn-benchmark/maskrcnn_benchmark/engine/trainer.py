@@ -43,19 +43,20 @@ def get_lr(optimizer):
 
 def get_triangular_lr(iteration, stepsize, base_lr, max_lr, decay_factor=0.8, decay_step=10000):
     """Given the inputs, calculates the lr that should be applicable for this iteration"""
-    if (iteration+1)%decay_step==0:
-        base_lr*=decay_factor
-        max_lr*=decay_factor
+    if (iteration + 1) % decay_step == 0:
+        base_lr *= decay_factor
+        max_lr *= decay_factor
     cycle = np.floor(1 + iteration / (2 * stepsize))
     x = np.abs(iteration / stepsize - 2 * cycle + 1)
     lr = base_lr + (max_lr - base_lr) * np.maximum(0, (1 - x))
     return lr
 
+
 def get_decay_lr(iteration, base_lr, decay_factor=0.8, decay_step=10000):
     """Given the inputs, calculates the lr that should be applicable for this iteration"""
-    if (iteration+1)%decay_step==0:
-        base_lr*=decay_factor
-    lr=base_lr
+    if (iteration + 1) % decay_step == 0:
+        base_lr *= decay_factor
+    lr = base_lr
     return lr
 
 
@@ -79,7 +80,7 @@ def do_train(
     end = time.time()
 
     # lambda1 = lambda epoch: 10 ** np.random.uniform(0, -3)
-    lambda1 = lambda iteration: get_triangular_lr(iteration, 1000, 10 ** (0), 10 ** (0))
+    lambda1 = lambda iteration: get_triangular_lr(iteration, 1000, 10 ** (-1), 10 ** (-1))
     lambda2 = lambda iteration: get_decay_lr(iteration, 10 ** (0))
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 

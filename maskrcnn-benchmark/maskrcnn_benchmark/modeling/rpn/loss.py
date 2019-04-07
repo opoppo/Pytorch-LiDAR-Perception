@@ -196,7 +196,8 @@ class RPNLossComputation(object):
 
         orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds],
-            orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+            # orien_targets[sampled_pos_inds].type(torch.cuda.FloatTensor),
+            orien_targets[sampled_pos_inds],
             reduction='sum',
             # size_average=False,
             # beta=1,

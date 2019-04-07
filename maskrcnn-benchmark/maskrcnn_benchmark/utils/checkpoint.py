@@ -12,13 +12,13 @@ from maskrcnn_benchmark.utils.model_zoo import cache_url
 
 class Checkpointer(object):
     def __init__(
-        self,
-        model,
-        optimizer=None,
-        scheduler=None,
-        save_dir="",
-        save_to_disk=None,
-        logger=None,
+            self,
+            model,
+            optimizer=None,
+            scheduler=None,
+            save_dir="",
+            save_to_disk=None,
+            logger=None,
     ):
         self.model = model
         self.optimizer = optimizer
@@ -47,6 +47,7 @@ class Checkpointer(object):
         save_file = os.path.join(self.save_dir, "{}.pth".format(name))
         self.logger.info("Saving checkpoint to {}".format(save_file))
         torch.save(data, save_file)
+        torch.save(self.model, os.path.join(self.save_dir, "{}.pth".format('toonnx')))
         self.tag_last_checkpoint(save_file)
 
     def load(self, f=None):
@@ -100,14 +101,14 @@ class Checkpointer(object):
 
 class DetectronCheckpointer(Checkpointer):
     def __init__(
-        self,
-        cfg,
-        model,
-        optimizer=None,
-        scheduler=None,
-        save_dir="",
-        save_to_disk=None,
-        logger=None,
+            self,
+            cfg,
+            model,
+            optimizer=None,
+            scheduler=None,
+            save_dir="",
+            save_to_disk=None,
+            logger=None,
     ):
         super(DetectronCheckpointer, self).__init__(
             model, optimizer, scheduler, save_dir, save_to_disk, logger
@@ -120,7 +121,7 @@ class DetectronCheckpointer(Checkpointer):
             paths_catalog = import_file(
                 "maskrcnn_benchmark.config.paths_catalog", self.cfg.PATHS_CATALOG, True
             )
-            catalog_f = paths_catalog.ModelCatalog.get(f[len("catalog://") :])
+            catalog_f = paths_catalog.ModelCatalog.get(f[len("catalog://"):])
             self.logger.info("{} points to {}".format(f, catalog_f))
             f = catalog_f
         # download url files

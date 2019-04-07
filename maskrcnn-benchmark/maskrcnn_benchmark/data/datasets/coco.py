@@ -50,9 +50,9 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
-        img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=1000)
+        # img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=1000)
 
-        # noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
+        noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
         for ann in anno:
             noiseratio = ((torch.randn(1)).div_(20)).exp_().clamp(0.9, 1.1)
             noiserotate = torch.randn(1).clamp(-3, 3)

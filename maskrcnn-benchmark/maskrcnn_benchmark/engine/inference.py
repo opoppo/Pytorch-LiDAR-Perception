@@ -82,10 +82,10 @@ def compute_on_dataset(model, data_loader, device):
             #     cv2.destroyAllWindows()
             #     os._exit(1)
     tarnumfiltered = eval_distance.__len__()
-    predinrange = sum((np.array(eval_distance) < 0.35 * 90) & (np.array(eval_angle) < 15))  # calc matched predictions
+    predinrange = sum((np.array(eval_distance) < 0.35 * 30) & (np.array(eval_angle) < 15))  # calc matched predictions
     prednum = outcenterlist
     tarnumraw = tarcenterlist
-    print(predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 90),
+    print(predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 30),
           sum(np.array(eval_angle) < 15))
     print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumraw))
     return results_dict

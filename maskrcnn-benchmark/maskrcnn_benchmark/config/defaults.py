@@ -22,7 +22,8 @@ _C = CN()
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
-_C.MODEL.DEVICE = "cuda"
+# _C.MODEL.DEVICE = "cuda"
+_C.MODEL.DEVICE = "cpc"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
@@ -37,11 +38,11 @@ _C.INPUT = CN()
 # Size of the smallest side of the image during training
 _C.INPUT.MIN_SIZE_TRAIN = 600  # (800,)
 # Maximum size of the side of the image during training
-_C.INPUT.MAX_SIZE_TRAIN = 999
+_C.INPUT.MAX_SIZE_TRAIN = 1000
 # Size of the smallest side of the image during testing
 _C.INPUT.MIN_SIZE_TEST = 600
 # Maximum size of the side of the image during testing
-_C.INPUT.MAX_SIZE_TEST = 999
+_C.INPUT.MAX_SIZE_TEST = 1000
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [127.5, 127.5, 127.5]
 # Values to be used for image normalization
@@ -161,7 +162,7 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.28
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.35
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.3
@@ -247,7 +248,7 @@ _C.SOLVER.CHECKPOINT_PERIOD = 2000
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 16
+_C.SOLVER.IMS_PER_BATCH = 8
 
 # ---------------------------------------------------------------------------- #
 # Specific test options
