@@ -74,7 +74,7 @@ def compute_on_dataset(model, data_loader, device):
             # shutil.rmtree('./result')
             # os.mkdir('./result')
 
-            cv2.imwrite('./result/%d.jpg' % i, im)
+            # cv2.imwrite('./result/%d.jpg' % i, im)
             pass
             # print('imwritten%d'%i)
             # k=cv2.waitKey()
@@ -189,6 +189,7 @@ def overlay_boxes(image, predictions, anntype):
 
         box = box.squeeze_().detach().cpu().numpy()
         alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / math.pi
+        # alpha = (orien[:][0] + orien[:][1]) * 0.5 * 180 / math.pi  # for testing!
         alpha = alpha.squeeze_().detach().cpu().numpy()
         # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()

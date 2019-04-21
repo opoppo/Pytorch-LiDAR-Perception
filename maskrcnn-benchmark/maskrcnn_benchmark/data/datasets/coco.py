@@ -44,8 +44,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.transforms = transforms
         # print(self.ids.__len__(),'====================================',ann_file)
-        self.gtcloud = np.load('../../testset/GTpoints.npy')
-        self.gtann = np.load('../../testset/GTanns.npy')
+        # self.gtcloud = np.load('../../testset/GTpoints.npy')
+        #         # self.gtann = np.load('../../testset/GTanns.npy')
 
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
@@ -93,8 +93,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         # print(rotations,'====')
         rotations = torch.tensor(rotations)
         rotations = torch.stack((5 * torch.sin(rotations), 5 * torch.cos(rotations)))
+        # rotations = torch.stack((rotations, rotations))  # for testing
         # COMPLEX space   *5 is radius of unit circle or weight
-        # rotations = torch.stack()
         rotations = torch.transpose(rotations, dim0=0, dim1=-1)  # N*2 shape
         # print(rotations)
         target.add_field("rotations", rotations)

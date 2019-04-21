@@ -32,7 +32,7 @@ class FastRCNNLossComputation(object):
     def match_targets_to_proposals(self, proposal, target):
         # print(target.get_field("rotations"), '===================================')
         # print(proposal,target,'++++')
-        match_quality_matrix = boxlist_iou(target, proposal, type=1)  # calculate the iter/ area1  !!!!!
+        match_quality_matrix = boxlist_iou(target, proposal, type=0)  # calculate the iter/ area1  !!!!!
 
         # print(match_quality_matrix[match_quality_matrix>0],'++++++++++')
         # print(target.get_field('rotations'),'==========')
@@ -206,8 +206,8 @@ class FastRCNNLossComputation(object):
         # )
         orien_loss = F.mse_loss(
             orien_regression[sampled_pos_inds_subset],
-            # orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
-            orien_targets[sampled_pos_inds_subset],
+            orien_targets[sampled_pos_inds_subset].type(torch.cuda.FloatTensor),
+            # orien_targets[sampled_pos_inds_subset],
             reduction='sum',
             # size_average=False,
             # beta=1,

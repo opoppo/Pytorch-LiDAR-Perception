@@ -5,7 +5,7 @@
       <paths name="41080ti">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/wangfa" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/wangfaa" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
