@@ -52,21 +52,21 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=1000)
 
-        noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
-        for ann in anno:
-            noiseratio = ((torch.randn(1)).div_(20)).exp_().clamp(0.9, 1.1)
-            noiserotate = torch.randn(1).clamp(-3, 3)
-            label = ann["bbox"]
-            orien = ann["rotation"]
-            box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2,
-                          orien)  # bBox_2D: length, width, xc, yc,alpha       label: 'bbox': [box.xtl, box.ytl, box.width, box.length],
-            box.rotate(noiserotate)
-            box.resize(noiseratio)
-            # box.translate(noiseoffset[0], noiseoffset[1])
-            box.xcyc2topleft()
-            ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
-            # slightly stretch the box may be better viewed ?
-            ann["rotation"] = box.alpha
+        # noiseoffset = (torch.randn(2))  # minimal bbox noise is better?
+        # for ann in anno:
+        #     noiseratio = ((torch.randn(1)).div_(20)).exp_().clamp(0.9, 1.1)
+        #     noiserotate = torch.randn(1).clamp(-3, 3)
+        #     label = ann["bbox"]
+        #     orien = ann["rotation"]
+        #     box = bBox_2D(label[3], label[2], label[0] + label[2] / 2, label[1] + label[3] / 2,
+        #                   orien)  # bBox_2D: length, width, xc, yc,alpha       label: 'bbox': [box.xtl, box.ytl, box.width, box.length],
+        #     box.rotate(noiserotate)
+        #     box.resize(noiseratio)
+        #     # box.translate(noiseoffset[0], noiseoffset[1])
+        #     box.xcyc2topleft()
+        #     ann["bbox"] = [box.xtl, box.ytl, box.width, box.length]
+        #     # slightly stretch the box may be better viewed ?
+        #     ann["rotation"] = box.alpha
 
         # filter crowd annotations
         # TODO might be better to add an extra field

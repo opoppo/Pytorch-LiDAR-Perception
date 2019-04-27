@@ -178,8 +178,8 @@ class FastRCNNLossComputation(object):
         )
         # print([proposal.get_field("regression_targets") for proposal in proposals],'===========')
 
-        # classification_loss = F.cross_entropy(class_logits, labels)
-        classification_loss = focal_loss_class(class_logits, labels)
+        classification_loss = F.cross_entropy(class_logits, labels)
+        # classification_loss = focal_loss_class(class_logits, labels)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with

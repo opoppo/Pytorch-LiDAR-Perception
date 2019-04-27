@@ -17,6 +17,8 @@ import math
 from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 import numpy as np
 import numpy.linalg as la
+import pandas as pd
+import time
 
 
 def compute_on_dataset(model, data_loader, device):
@@ -27,45 +29,62 @@ def compute_on_dataset(model, data_loader, device):
     eval_angle = []
     outcenterlist = 0
     tarcenterlist = 0
+    infertimelist=[]
 
     for i, batch in enumerate(tqdm(data_loader)):
+        time_start = time.time()
         images, targets, image_ids = batch
         # print(targets,'============================')
         images = images.to(device)
         with torch.no_grad():
             output = model(images)
+            time_end = time.time()
             # print(output.size(),'=========oo')
             output = [o.to(cpu_device) for o in output]
         results_dict.update(
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
+        print('inference time: %.2f' % ((time_end - time_start) * 1000), 'ms')
+        infertimelist.append((time_end - time_start) * 1000)
         # print(images.tensors.size(),'=====================================')
-        x = images.tensors.permute(0, 2, 3, 1)
-        images = x.cpu().detach().numpy().copy()
-        # print(emptyImage.shape,type(emptyImage))
-        # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
+        # x = images.tensors.permute(0, 2, 3, 1)
+        # images = x.cpu().detach().numpy().copy()
+        # # print(emptyImage.shape,type(emptyImage))
+        # # emptyImage = cv2.resize(emptyImage, (200, 200), interpolation=cv2.INTER_CUBIC)
+        #
+        # del x
 
-        del x
-        for j, (im, tar, out) in enumerate(zip(images, targets, output)):
-            outcenter, outalpha = overlay_boxes(im, out, 'output')
-            tarcenter, taralpha = overlay_boxes(im, tar, 'targets')
-            m, n = outcenter.shape
-            o, p = tarcenter.shape
-            outcenterlist += n
-            tarcenterlist += p
-            if p == 0:
-                continue
-            if n == 0:
-                continue
-            D = np.zeros([n, p])
-            A = np.zeros([n, p])
-            for q in range(n):
-                for j in range(p):
-                    D[q, j] = la.norm(outcenter[:, q] - tarcenter[:, j])  # distance matrix
-                    A[q, j] = outalpha[q] - taralpha[j]
-            for ii in range(p):
-                eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
-                eval_angle.append(A[np.argmin(D, axis=0)[ii]][ii])
+        # rangecoor = [540, 360, 252, 108]  # in res 600 output 608  15m 10m 7m 3m
+        # r = rangecoor[0]
+        # # ymin = 547.2 - r
+        # ymin = 0
+        # ymax = 540
+        # xmin = 300 - 0.5 * r-999
+        # xmax = 300 + 0.5 * r+999
+        # xylimits = [xmin, xmax, ymin, ymax]
+
+        # for j, (im, tar, out) in enumerate(zip(images, targets, output)):
+        #
+        #     outcenter, outalpha = overlay_boxes(im, out, 'output', xylimits)
+        #     tarcenter, taralpha = overlay_boxes(im, tar, 'targets', xylimits)
+        #
+        #     m, n = outcenter.shape
+        #     o, p = tarcenter.shape
+        #     outcenterlist += n
+        #     tarcenterlist += p
+        #     if p == 0:
+        #         continue
+        #     if n == 0:
+        #         continue
+        #     D = np.zeros([n, p])
+        #     A = np.zeros([n, p])
+        #     for q in range(n):
+        #         for j in range(p):
+        #             D[q, j] = la.norm(outcenter[:, q] - tarcenter[:, j])  # distance matrix
+        #             A[q, j] = outalpha[q] - taralpha[j]
+        #     for ii in range(p):
+        #         eval_distance.append(D[np.argmin(D, axis=0)[ii]][ii])
+        #         eval_angle.append(A[np.argmin(D, axis=0)[ii]][ii])
             # print(out.shape)
 
             # cv2.imshow('scan', im)
@@ -75,21 +94,34 @@ def compute_on_dataset(model, data_loader, device):
             # os.mkdir('./result')
 
             # cv2.imwrite('./result/%d.jpg' % i, im)
-            pass
+            # pass
             # print('imwritten%d'%i)
             # k=cv2.waitKey()
             # if k == 27:  # Esc for exiting
             #     cv2.destroyAllWindows()
             #     os._exit(1)
-    tarnumfiltered = eval_distance.__len__()
-    predinrange = sum((np.array(eval_distance) < 0.35 * 30) & (np.array(eval_angle) < 15))  # calc matched predictions
-    prednum = outcenterlist
-    tarnumraw = tarcenterlist
-    print(predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < 0.35 * 30),
-          sum(np.array(eval_angle) < 15))
-    print(' precision: %.6f' % (predinrange / prednum), ' racall: %.6f' % (predinrange / tarnumraw))
-    return results_dict
+    # tarnumfiltered = eval_distance.__len__()
+    # dislist = [0.15, 0.3, 0.45]
+    # anglist = [5, 15, 25, 360]
+    # prerec = []
 
+    # for dis in dislist:
+    #     for ang in anglist:
+    #         predinrange = sum(
+    #             (np.array(eval_distance) < dis * 30) & (np.array(eval_angle) < ang))  # calc matched predictions
+    #         prednum = outcenterlist
+    #         tarnumraw = tarcenterlist
+    #         print(predinrange, prednum, tarnumraw, '++++', sum(np.array(eval_distance) < dis * 30),
+    #               sum(np.array(eval_angle) < ang))
+    #         pre = predinrange / prednum if prednum != 0 else 1
+    #         rec = predinrange / tarnumraw if tarnumraw != 0 else 1
+    #         print(' precision: %.6f' % pre, ' racall: %.6f' % rec, ' with dis', dis, 'ang', ang)
+    #         prerec.append([pre, rec, dis, ang])
+    # df = pd.DataFrame(prerec)
+    # df.to_csv('./prerec.csv', index=0, index_label=0)
+    df = pd.DataFrame(infertimelist)
+    df.to_csv('./infertime.csv', index=0, index_label=0)
+    return results_dict
 
 def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     all_predictions = scatter_gather(predictions_per_gpu)
@@ -111,7 +143,6 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     # convert to a list
     predictions = [predictions[i] for i in image_ids]
     return predictions
-
 
 def inference(
         model,
@@ -165,8 +196,7 @@ def inference(
                     output_folder=output_folder,
                     **extra_args)
 
-
-def overlay_boxes(image, predictions, anntype):
+def overlay_boxes(image, predictions, anntype, xylimits):
     """
     Adds the predicted boxes on top of the image
     Arguments:
@@ -198,6 +228,11 @@ def overlay_boxes(image, predictions, anntype):
         w = bottom_right[0] - top_left[0]
         xc = (top_left[0] + bottom_right[0]) / 2
         yc = (top_left[1] + bottom_right[1]) / 2
+
+        if not (xylimits[0] < xc < xylimits[1] and xylimits[2] < yc < xylimits[3]):
+            # continue
+            pass
+
         xclist.append(xc)
         yclist.append(yc)
         alphalist.append(alpha)

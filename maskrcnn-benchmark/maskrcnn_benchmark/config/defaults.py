@@ -3,6 +3,8 @@ import os
 
 from yacs.config import CfgNode as CN
 
+import pandas
+
 # -----------------------------------------------------------------------------
 # Convention about Training / Test specific parameters
 # -----------------------------------------------------------------------------
@@ -23,7 +25,7 @@ _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False
 _C.MODEL.MASK_ON = False
 _C.MODEL.DEVICE = "cuda"
-# _C.MODEL.DEVICE = "cpc"
+# _C.MODEL.DEVICE = "cpu"
 _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
 
 # If the WEIGHT starts with a catalog://, like :R-50, the code will look for
@@ -162,7 +164,7 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.45
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.4
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.3
@@ -259,7 +261,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 2
+_C.TEST.IMS_PER_BATCH = 1
 
 # ---------------------------------------------------------------------------- #
 # Misc options

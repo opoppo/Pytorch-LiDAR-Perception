@@ -10,6 +10,8 @@ import torch.distributed as dist
 from maskrcnn_benchmark.utils.comm import get_world_size
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
+from torchsummary import summary
+
 
 def reduce_loss_dict(loss_dict):
     """
@@ -75,7 +77,13 @@ def do_train(
     meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
+    # model.eval()
+    # summary(model, [(3, 608, 608)])
     model.train()
+    # print(model,'==============================================================================')
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # PyTorch v0.4.0
+    # model = model.to(device)
+
     start_training_time = time.time()
     end = time.time()
 

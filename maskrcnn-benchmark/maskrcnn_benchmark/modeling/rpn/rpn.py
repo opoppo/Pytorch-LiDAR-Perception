@@ -9,6 +9,8 @@ from .loss import make_rpn_loss_evaluator
 from .anchor_generator import make_anchor_generator
 from .inference import make_rpn_postprocessor
 
+from torchsummary import summary
+
 
 @registry.RPN_HEADS.register("SingleConvRPNHead")
 class RPNHead(nn.Module):
