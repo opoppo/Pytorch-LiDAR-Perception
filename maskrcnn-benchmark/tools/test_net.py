@@ -17,8 +17,13 @@ from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
+import numpy as np
+import os
 
-def main():
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+
+
+def main(thresh):
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
     parser.add_argument(
         "--config-file",
@@ -57,6 +62,12 @@ def main():
     logger.info("Collecting env info (might take some time)")
     logger.info("\n" + collect_env_info())
 
+    # ===================================
+    cfg.MODEL.ROI_HEADS.defrost()
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH = thresh
+    prerec = []
+    # ====================================
+
     model = build_detection_model(cfg)
     model.to(cfg.MODEL.DEVICE)
 
@@ -76,7 +87,7 @@ def main():
             output_folders[idx] = output_folder
     data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
     for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
-        inference(
+        a, prerec = inference(
             model,
             data_loader_val,
             dataset_name=dataset_name,
@@ -89,6 +100,19 @@ def main():
         )
         synchronize()
 
+    del model
+    return prerec
+
 
 if __name__ == "__main__":
-    main()
+    # thresh_list = [0, 0.005, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5, 0.525, 0.55,
+    #                0.575, 0.6, 0.625, 0.65, 0.675, 0.7, 0.725, 0.75, 0.775, 0.8, 0.825, 0.85, 0.86, 0.87, 0.88, 0.89,
+    #                0.9, 0.91, 0.92, 0.93]
+    thresh_list = [0.4,]
+    pr_array = []
+
+    for thresh in thresh_list:
+        prerec = main(thresh)
+        pr_array.append(prerec)
+        print(thresh, '================================================')
+    np.save('prerec', pr_array)

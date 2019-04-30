@@ -11,7 +11,7 @@ anndata = np.load('./testset/anndata.npy')
 img = []
 
 #  extract GT data for augmentation
-GroundTruthSampling(cloudata, anndata)
+# GroundTruthSampling(cloudata, anndata)
 
 # ==============================
 resolution = 1000  # res*res !!!   (224 ResNet  299 Inception  1000 Visualization ONLY)
@@ -36,10 +36,10 @@ for i, scan in enumerate(cloudata):
             for e in enhanced:
                 if e[0] < 1000 and 0 <= e[0] and e[1] < 1000 and 0 <= e[0]:
                     emptyImage[e[0], e[1]] = (
-                        # int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
-                        # int(255 - (dot[0] * 235 / 30 + 20)),
-                        # int(dot[1] * 75 / 15 + 80)
-                        255, 255, 255
+                        int(255 - math.hypot(dot[0], dot[1]) * 255 / 60),
+                        int(255 - (dot[0] * 235 / 30 + 20)),
+                        int(dot[1] * 75 / 15 + 80)
+                        # 255, 255, 255
                     )
 
     # outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)

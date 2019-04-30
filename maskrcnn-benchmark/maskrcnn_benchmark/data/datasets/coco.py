@@ -9,6 +9,8 @@ from maskrcnn_benchmark.engine.bBox_2D import bBox_2D
 import math
 import numpy as np
 from maskrcnn_benchmark.data.datasets.overlay_GT_box import overlay_GT_on_scan
+import cv2
+from PIL import Image
 
 
 # ==============================
@@ -49,6 +51,14 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
+
+        img_original = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+        img_original = img_original + 127.5
+        trans1 = torchvision.transforms.ToTensor()
+        img_original = trans1(img_original)
+        # cv2.imwrite('d.jpg', img_original)
+        # print('============')
+        # pass
 
         # img, anno = overlay_GT_on_scan(img, anno, self.gtcloud, self.gtann, resolution=1000)
 
@@ -109,7 +119,7 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
 
         # print(img.size(),'=================%d=================='%idx)
         # print(target.get_field('rotations'), '============================')
-        return img, target, idx
+        return img, target, idx, img_original
 
     def get_img_info(self, index):
         img_id = self.id_to_img_map[index]
