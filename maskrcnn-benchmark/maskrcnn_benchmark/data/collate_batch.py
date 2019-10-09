@@ -17,5 +17,5 @@ class BatchCollator(object):
         images = to_image_list(transposed_batch[0], self.size_divisible)
         targets = transposed_batch[1]
         img_ids = transposed_batch[2]
-        images_original = to_image_list(transposed_batch[3], self.size_divisible)
-        return images, targets, img_ids, images_original
+        # images_original = to_image_list(transposed_batch[3], self.size_divisible)
+        return images, targets, img_ids#, images_original

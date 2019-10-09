@@ -37,7 +37,7 @@ class RPNLossComputation(object):
 
     def match_targets_to_anchors(self, anchor, target):
         # print(len(anchor),len(target),'==============================match=====')
-        match_quality_matrix = boxlist_iou(target, anchor, type=0)
+        match_quality_matrix = boxlist_iou(target, anchor, type=1)
         # type=1: matching the square GT bbox  type=0: normal matching
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # RPN doesn't need any fields from target

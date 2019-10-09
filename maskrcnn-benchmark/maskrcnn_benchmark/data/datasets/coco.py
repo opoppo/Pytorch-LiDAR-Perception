@@ -52,10 +52,13 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
     def __getitem__(self, idx):
         img, anno = super(COCODataset, self).__getitem__(idx)
 
-        img_original = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
-        img_original = img_original + 127.5
-        trans1 = torchvision.transforms.ToTensor()
-        img_original = trans1(img_original)
+        img_original=img
+        # img_original = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+        # img_original = img_original + 127.5
+        # trans1 = torchvision.transforms.ToTensor()
+        # img_original = trans1(img_original)
+        # img_original[img_original - 127.5 < 30] = 0
+        # img_original = img_original * 0.65
         # cv2.imwrite('d.jpg', img_original)
         # print('============')
         # pass
@@ -102,8 +105,8 @@ class COCODataset(torchvision.datasets.coco.CocoDetection):
         rotations = [obj["rotation"] * math.pi / 180 for obj in anno]
         # print(rotations,'====')
         rotations = torch.tensor(rotations)
-        rotations = torch.stack((5 * torch.sin(rotations), 5 * torch.cos(rotations)))
-        # rotations = torch.stack((rotations, rotations))  # for testing
+        # rotations = torch.stack((5 * torch.sin(rotations), 5 * torch.cos(rotations)))
+        rotations = torch.stack((rotations, rotations))  # for testing
         # COMPLEX space   *5 is radius of unit circle or weight
         rotations = torch.transpose(rotations, dim0=0, dim1=-1)  # N*2 shape
         # print(rotations)

@@ -20,6 +20,12 @@ import numpy.linalg as la
 import pandas as pd
 import time
 
+from flashtorch.utils import apply_transforms, load_image
+from flashtorch.saliency import Backprop
+# from flashtorch.activmax import GradientAscent
+
+import matplotlib.pyplot as plt
+
 
 def compute_on_dataset(model, data_loader, device):
     model.eval()
@@ -31,9 +37,19 @@ def compute_on_dataset(model, data_loader, device):
     tarcenterlist = 0
     infertimelist = []
 
+    # model.to(cpu_device)
+    # backprop = Backprop(model)
+    # image = load_image('/home/wangfa/Workspace/jupiter/maskrcnn-benchmark/datasets/coco/train2014/im14.jpg')
+    # input_ = apply_transforms(image)
+    #
+    # target_class = 24
+    # backprop.visualize(input_, target_class, guided=True)
+    # plt.show()
+
     for i, batch in enumerate(tqdm(data_loader)):
         time_start = time.time()
-        images, targets, image_ids, images_original = batch
+        # images, targets, image_ids, images_original = batch
+        images, targets, image_ids= batch
         # print(targets,'============================')
         images = images.to(device)
         with torch.no_grad():
@@ -44,8 +60,9 @@ def compute_on_dataset(model, data_loader, device):
         results_dict.update(
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
-
-        x = images_original.tensors.permute(0, 2, 3, 1)
+        #
+        # x = images_original.tensors.permute(0, 2, 3, 1)
+        x = images.tensors.permute(0, 2, 3, 1)
         images_original = x.cpu().detach().numpy().copy()
         del x
 
@@ -60,9 +77,9 @@ def compute_on_dataset(model, data_loader, device):
         xylimits = [xmin, xmax, ymin, ymax]
 
         for j, (im, tar, out) in enumerate(zip(images_original, targets, output)):
-
-            outcenter, outalpha = overlay_boxes(im, out, 'output', xylimits, 1000)
-            tarcenter, taralpha = overlay_boxes(im, tar, 'targets', xylimits, 1000)
+        #
+            outcenter, outalpha, im = overlay_boxes(im, out, 'output', xylimits, 1000)
+            tarcenter, taralpha, im = overlay_boxes(im, tar, 'targets', xylimits, 1000)
 
             m, n = outcenter.shape
             o, p = tarcenter.shape
@@ -89,7 +106,9 @@ def compute_on_dataset(model, data_loader, device):
             # shutil.rmtree('./result')
             # os.mkdir('./result')
             #
-            cv2.imwrite('./result/%d.jpg' % i, im)
+            # im = cv2.flip(im, 0)
+            # im = cv2.flip(im, 1)
+            # cv2.imwrite('./result/%d.jpg' % i, im)  #====================================
             # pass
             # print('imwritten%d'%i)
             # k=cv2.waitKey()
@@ -100,7 +119,7 @@ def compute_on_dataset(model, data_loader, device):
     dislist = [0.15, 0.3, 0.45]
     anglist = [5, 15, 25, 360]
     prerec = []
-
+    #
     for dis in dislist:
         for ang in anglist:
             predinrange = sum(
@@ -204,6 +223,7 @@ def overlay_boxes(image, predictions, anntype, xylimits, res):
             It should contain the field `labels`.
     """
     # labels = predictions.get_field("labels")
+    imgsrc = image.copy()
     oriens = predictions.get_field("rotations")
     boxes = predictions.bbox
     xclist = []
@@ -217,8 +237,8 @@ def overlay_boxes(image, predictions, anntype, xylimits, res):
         offset = {'targets': 2, 'output': 0}
 
         box = box.squeeze_().detach().cpu().numpy()
-        alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / math.pi
-        # alpha = (orien[:][0] + orien[:][1]) * 0.5 * 180 / math.pi  # for testing!
+        # alpha = torch.atan2(orien[:][0], orien[:][1]) * 180 / math.pi
+        alpha = (orien[:][0] + orien[:][1]) * 0.5 * 180 / math.pi  # for testing!
         alpha = alpha.squeeze_().detach().cpu().numpy()
         # print(alpha,anntype,'====')
         # top_left, bottom_right = box[:2].tolist(), box[2:].tolist()
@@ -245,17 +265,20 @@ def overlay_boxes(image, predictions, anntype, xylimits, res):
 
         box = bBox_2D(l, w, xc + offset[anntype], yc + offset[anntype], alpha)
         box.scale(res / 600, 0, 0)
+        # box.resize(1.2)
         box.bBoxCalcVertxex()
 
         rad = box.alpha * math.pi / 180
-        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 1, cv2.LINE_AA)
-        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 1, cv2.LINE_AA)
+        cv2.line(image, box.vertex1, box.vertex2, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex2, box.vertex4, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex3, box.vertex1, color[anntype], 2, cv2.LINE_AA)
+        cv2.line(image, box.vertex4, box.vertex3, color[anntype], 2, cv2.LINE_AA)
         # print(box.vertex4, box.vertex3, box.vertex2, box.vertex1, '====',l*w,'\t',l,'\t',w)
-        point = int(box.xc - box.length * 0.8 * np.sin(rad)), int(box.yc + box.length * 0.8 * np.cos(rad))
-        cv2.line(image, (int(box.xc), int(box.yc)),
-                 point,
-                 color[anntype], 1, cv2.LINE_AA)
+        # point = int(box.xc - box.length * 0.8 * np.sin(rad)), int(box.yc + box.length * 0.8 * np.cos(rad))
+        # cv2.line(image, (int(box.xc), int(box.yc)),
+        #          point,
+        #          color[anntype], 2, cv2.LINE_AA)
 
-    return np.array([xclist, yclist], dtype=float), np.array(alphalist, dtype=float)
+    image = cv2.addWeighted(imgsrc, 0.4, image, 0.6, 0)
+
+    return np.array([xclist, yclist], dtype=float), np.array(alphalist, dtype=float), image

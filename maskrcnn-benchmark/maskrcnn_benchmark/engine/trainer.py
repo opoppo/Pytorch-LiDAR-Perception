@@ -92,6 +92,7 @@ def do_train(
     lambda2 = lambda iteration: get_decay_lr(iteration, 10 ** (0))
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda1)
 
+    # for iteration, (images, targets, _, io) in enumerate(data_loader, start_iter):
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         # for target in targets:
         #     print(target.get_field('rotations'), '==========')

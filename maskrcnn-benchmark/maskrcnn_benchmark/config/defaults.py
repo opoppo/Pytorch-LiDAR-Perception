@@ -164,13 +164,13 @@ _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 # Minimum score threshold (assuming scores in a [0, 1] range); a value chosen to
 # balance obtaining high recall with not having too many low precision
 # detections that will slow down inference post processing steps (like NMS)
-_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.0
+_C.MODEL.ROI_HEADS.SCORE_THRESH = 0.6
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
 _C.MODEL.ROI_HEADS.NMS = 0.3
 # Maximum number of detections to return per image (100 is based on the limit
 # established for the COCO dataset)
-_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 1200
+_C.MODEL.ROI_HEADS.DETECTIONS_PER_IMG = 12
 
 # _C.MODEL.ROI_HEADS.defrost()
 
@@ -252,7 +252,7 @@ _C.SOLVER.CHECKPOINT_PERIOD = 2000
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 8
+_C.SOLVER.IMS_PER_BATCH = 16
 
 # ---------------------------------------------------------------------------- #
 # Specific test options
@@ -263,7 +263,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 1
+_C.TEST.IMS_PER_BATCH = 4
 
 # ---------------------------------------------------------------------------- #
 # Misc options

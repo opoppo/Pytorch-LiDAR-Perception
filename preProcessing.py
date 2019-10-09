@@ -43,7 +43,7 @@ for i, scan in enumerate(cloudata):
                         # 255, 255, 255
                     )
 
-    # outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+    outImage = cv2.resize(emptyImage, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
     for j, label in enumerate(anndata[i]):
         if label[4] == -90 or label[4] == 90:
@@ -58,7 +58,7 @@ for i, scan in enumerate(cloudata):
             continue
         # print(' xc ', box.xc, ' yc ', box.yc, ' l ', box.length, ' w ', box.width)
         box.scale(900 / 30, 500, 100)
-        # box.scale(resolution / 200, 0, 0)
+        box.scale(resolution / 1000, 0, 0)
 
         anndata[i][j] = [box.length, box.width, box.xc, box.yc, box.alpha]
 
@@ -79,7 +79,7 @@ for i, scan in enumerate(cloudata):
     #     cv2.destroyAllWindows()
     #     os._exit(1)
 
-    img.append(emptyImage)
+    img.append(outImage)
 
 # Flipping
 augmentimg = []
@@ -180,7 +180,7 @@ for j, ann in enumerate(anndata):
             'image_id': j,
             'bbox': [box.xtl, box.ytl, box.width, box.length],
             'rotation': box.alpha,
-            'category_id': 1,
+            'category_id': 0,
             'id': idcount,
             'iscrowd': 0
         }
@@ -191,10 +191,15 @@ for j, ann in enumerate(anndata):
         marea += box.length * box.width
         mrotation += box.alpha
 
-catinfo = {
+catinfo ={
     "supercategory": "none",
-    "id": 1,
+    "id": 0,
     "name": "car"}
+# {
+#     "supercategory": "none",
+#     "id": 0,
+#     "name": "background"},
+
 categories.append(catinfo)
 
 random.shuffle(images)

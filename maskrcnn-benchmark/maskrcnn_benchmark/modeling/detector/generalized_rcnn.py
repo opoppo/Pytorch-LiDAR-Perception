@@ -12,6 +12,9 @@ from ..backbone import build_backbone
 from ..rpn.rpn import build_rpn
 from ..roi_heads.roi_heads import build_roi_heads
 
+from torchvision.utils import save_image
+from tqdm import tqdm
+
 
 class GeneralizedRCNN(nn.Module):
     """
@@ -29,6 +32,7 @@ class GeneralizedRCNN(nn.Module):
         self.backbone = build_backbone(cfg)
         self.rpn = build_rpn(cfg)
         self.roi_heads = build_roi_heads(cfg)
+        self.flag=False
 
     def forward(self, images, targets=None):
         # for target in targets:
@@ -48,8 +52,11 @@ class GeneralizedRCNN(nn.Module):
 
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
+        imagen_tensor=images.tensors
         images = to_image_list(images)
         features = self.backbone(images.tensors)
+        if not self.flag:
+            self.save_feature_map(features,imagen_tensor)    #=============================================== SAVING FEATURE MAPS
         # print(images.tensors.size(),'=========================================')
         proposals, proposal_losses = self.rpn(images, features, targets)
         if self.roi_heads:
@@ -67,3 +74,18 @@ class GeneralizedRCNN(nn.Module):
             return losses
 
         return result
+
+    def save_feature_map(self,feature_maps,image_tensor):
+        for ll,layer in  enumerate(tqdm(feature_maps)):
+            if True:
+                for mm,map in enumerate(layer):
+                    save_image(image_tensor[mm],
+                               './fm/layer' + str(ll) + 'image' + str(mm) +  '_.png')
+                    if mm==0:
+                        for cc,channel in enumerate(map):
+                            if cc==81 or cc==89:
+                                save_image(channel,'./fm/layer'+str(ll)+'image'+str(mm)+'channel'+str(cc)+'.png')
+                                self.flag=True
+                                # if cc>=5:
+                                #     break
+

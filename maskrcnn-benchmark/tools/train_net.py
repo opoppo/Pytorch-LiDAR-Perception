@@ -7,9 +7,12 @@ Basic training script for PyTorch
 # NOTE: this should be the first import (no not reorder)
 from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 import argparse
 import os
+import sys
+sys.path.append('D:/Workspace/JupyterNotebook/maskrcnn_benchmark')
 
 import torch
 from maskrcnn_benchmark.config import cfg
@@ -31,7 +34,6 @@ def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
-
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
 
